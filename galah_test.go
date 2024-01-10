@@ -20,7 +20,7 @@ func TestStartServers(t *testing.T) {
 			name: "Start server with unknown protocol",
 			portConfig: PortConfig{
 				Port:     8081,
-				Protocol: []string{"UNKNOWN_PROTOCOL"},
+				Protocol: "UNKNOWN_PROTOCOL",
 			},
 			wantErr: true,
 		},
@@ -51,7 +51,7 @@ func TestStartHTTPServer(t *testing.T) {
 			name: "Start server on an already occupied port",
 			portConfig: PortConfig{
 				Port:     8080, // Use a known port
-				Protocol: []string{"HTTP"},
+				Protocol: "HTTP",
 			},
 			wantErr: true,
 		},
@@ -97,7 +97,7 @@ func TestStartTLSServer(t *testing.T) {
 			name: "Start server with invalid TLS profile",
 			portConfig: PortConfig{
 				Port:       8444,
-				Protocol:   []string{"TLS"},
+				Protocol:   "TLS",
 				TLSProfile: "invalidTLSProfile",
 			},
 			wantErr: true,
@@ -106,7 +106,7 @@ func TestStartTLSServer(t *testing.T) {
 			name: "Start server with missing TLS profile",
 			portConfig: PortConfig{
 				Port:     8445,
-				Protocol: []string{"TLS"},
+				Protocol: "TLS",
 			},
 			wantErr: true,
 		},

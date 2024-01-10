@@ -22,9 +22,9 @@ type TLSConfig struct {
 }
 
 type PortConfig struct {
-	Port       uint16   `yaml:"port"`
-	Protocol   []string `yaml:"protocol"`
-	TLSProfile string   `yaml:"tls_profile,omitempty"`
+	Port       uint16 `yaml:"port"`
+	Protocol   string `yaml:"protocol"`
+	TLSProfile string `yaml:"tls_profile,omitempty"`
 }
 
 func LoadConfig(file string) (*Config, error) {

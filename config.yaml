@@ -17,18 +17,14 @@ cache_duration: 24
 # Honeypot Ports
 ports:
   - port: 8080
-    protocol:
-      - HTTP
+    protocol: HTTP
   - port: 8888
-    protocol:
-      - HTTP
+    protocol: HTTP
   - port: 443
-    protocol:
-      - TLS
+    protocol: TLS
     tls_profile: profile1_selfsigned
   - port: 8443
-    protocol:
-      - TLS
+    protocol: TLS
     tls_profile: profile1_selfsigned
 
 # TLS Profiles

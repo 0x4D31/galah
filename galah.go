@@ -203,20 +203,19 @@ func (app *App) startServers() error {
 			server := app.setupServer(pc)
 			app.Servers = make(map[uint16]*http.Server)
 
-			for _, protocol := range pc.Protocol {
-				var err error
-				switch protocol {
-				case "TLS":
-					err = app.startTLSServer(server, pc)
-				case "HTTP":
-					err = app.startHTTPServer(server, pc)
-				default:
-					err = fmt.Errorf("Unknown protocol for port %d", pc.Port)
-				}
-				if err != nil {
-					return err
-				}
+			var err error
+			switch pc.Protocol {
+			case "TLS":
+				err = app.startTLSServer(server, pc)
+			case "HTTP":
+				err = app.startHTTPServer(server, pc)
+			default:
+				err = fmt.Errorf("Unknown protocol for port %d", pc.Port)
 			}
+			if err != nil {
+				return err
+			}
+
 			return nil
 		})
 	}
