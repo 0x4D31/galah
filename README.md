@@ -1,10 +1,24 @@
 <img align="left" src="images/galah.png" width="210px">
 
-Galah _(/ɡəˈlɑː/ - sounds like guh·laa)_ is a web honeypot tool powered by LLM (Large Language Models) and, for now, supports the OpenAI API. Named after the smart Australian parrot with the ability to mimic, Galah does something similar—providing interesting yet sometimes foolish responses to incoming HTTP requests. By the way, in Aussie English, [Galah](https://www.macquariedictionary.com.au/blog/article/728/) also means fool!
+TL;DR: Galah (/ɡəˈlɑː/ - pronounced ‘guh-laa’) is an LLM (Large Language Model) powered web honeypot, currently compatible with the OpenAI API, that is able to mimic various applications and dynamically respond to arbitrary HTTP requests.
 
-Unlike the traditional, cumbersome method of emulating numerous web applications with inherent limitations, Galah takes a different route. Leveraging LLMs, it processes incoming HTTP requests and dynamically crafts realistic responses on the fly to engage attackers.
+## Description
 
-> **Note:** This was a fun weekend project I created in early 2023 and is not intended for production use. The honeypot can be easily fingerprinted based on its response time, non-standard, and sometimes silly responses, or other techniques. Use this tool at your own risk, and be sure to set usage limits for your OpenAI API. The code has not been peer-reviewed, and I would appreciate any feedback and pull requests.
+Named after the clever Australian parrot known for its mimicry, Galah mirrors this trait in its functionality. Unlike traditional web honeypots that rely on a manual and limiting method of emulating numerous web applications or vulnerabilities, Galah adopts a novel approach. This LLM-powered honeypot mimics various web applications by dynamically crafting relevant (and occasionally foolish) responses, including HTTP headers and body content, to arbitrary HTTP requests. Fun fact: in Aussie English, [Galah](https://www.macquariedictionary.com.au/blog/article/728/) also means fool!
+
+I’ve deployed a cache for the LLM-generated responses (the cache duration can be customized in the config file) to avoid generating multiple responses for the same request and to reduce the cost of the OpenAI API. The cache stores responses per port, meaning if you probe a specific port of the honeypot, the generated response won’t be returned for the same request on a different port.
+
+The prompt is the most crucial part of this honeypot! You can update the prompt in the config file, but be sure not to change the part that instructs the LLM to generate the response in the specified JSON format.
+
+> **Note:** Galah was a fun weekend project I created to evaluate the capabilities of LLMs in generating HTTP messages, and it is not intended for production use. The honeypot may be fingerprinted based on its response time, non-standard, or sometimes weird responses, and other network-based techniques. Use this tool at your own risk, and be sure to set usage limits for your OpenAI API.
+
+### Future Enhancements
+
+- Rule-Based Response: The new version of Galah will employ a dynamic, rule-based approach, adding more control over response generation. This will further reduce OpenAI API costs and increase the accuracy of the generated responses.
+
+- Response Database: It will enable you to generate and import a response database. This ensures the honeypot only turns to the OpenAI API for unknown or new requests. I’m also working on cleaning up and sharing my own database.
+
+- Support for Other LLMs.
 
 ## Getting Started
 
@@ -12,7 +26,7 @@ Unlike the traditional, cumbersome method of emulating numerous web applications
 - Create an OpenAI API key from [here](https://platform.openai.com/api-keys).
 - If you want to serve over HTTPS, generate TLS certificates.
 - Clone the repo and install the dependencies.
-- Update the `config.yaml` file. Feel free to change the prompt too.
+- Update the `config.yaml` file.
 - Build and run the Go binary!
 
 ```
@@ -46,7 +60,7 @@ Unlike the traditional, cumbersome method of emulating numerous web applications
 
 ## Example Responses
 
-Stay tuned for a blog post on the analysis of data collected from a 3-month deployment of Galah on GCP. But for now, here are some local tests.
+Here are some example responses:
 
 ### Example 1
 ```
@@ -74,9 +88,11 @@ JSON log record:
 {"timestamp":"2024-01-01T05:40:34.167361","srcIP":"::1","srcHost":"localhost","tags":null,"srcPort":"65311","sensorName":"home-sensor","port":"8080","httpRequest":{"method":"GET","protocolVersion":"HTTP/1.1","request":"/.aws/credentials","userAgent":"curl/7.71.1","headers":"User-Agent: [curl/7.71.1], Accept: [*/*]","headersSorted":"Accept,User-Agent","headersSortedSha256":"cf69e186169279bd51769f29d122b07f1f9b7e51bf119c340b66fbd2a1128bc9","body":"","bodySha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},"httpResponse":{"headers":{"Connection":"close","Content-Encoding":"gzip","Content-Length":"126","Content-Type":"text/plain","Server":"Apache/2.4.51 (Unix)"},"body":"[default]\naws_access_key_id = AKIAIOSFODNN7EXAMPLE\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\nregion = us-west-2"}}
 ```
 
-Okay, that was nice; I'm impressed!
+Okay, that was impressive!
 
 ### Example 3
+
+Now, let's do some sort of adversarial testing!
 
 ```
 % curl http://localhost:8888/are-you-a-honeypot
