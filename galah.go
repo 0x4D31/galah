@@ -125,7 +125,7 @@ func main() {
 
 	if apiKeyEnvVar != "" {
 		config.APIKey = apiKeyEnvVar
-		log.Printf("Using environment variable for OpenAPI key.")
+		log.Printf("Using environment variable for OpenAI API key.")
 	}
 
 	db := initDB(args.DbPath)
