@@ -74,11 +74,11 @@ docker run -d -p 8080:8080 -p 8443:8443 -p 443:443 -p 8080:8080 -e API_KEY='Open
 
 - Run the Kubernetes deployment manifest files
 ```bash
-kc apply -f https://github.com/0x4D31/galah/deploy/galah.yml
+kubectl apply -f https://raw.githubusercontent.com/0x4D31/galah/main/deploy/galah.yml
 ```
 - Create the openai-api-key secret with your OpenAI API key (replace `your-key`)
 ```bash
-kc -n galah create secret generic openai-api-key --from-literal=api_key=your-key
+kubectl -n galah create secret generic openai-api-key --from-literal=api_key=your-key
 ```
 
 ## Example Responses
