@@ -70,6 +70,17 @@ The prompt is the most crucial part of this honeypot! You can update the prompt 
 docker run -d -p 8080:8080 -p 8443:8443 -p 443:443 -p 8080:8080 -e API_KEY='OpenAI_API_Key_Here' infosecb/galah:latest
 ```
 
+### Deploy in Kubernetes
+
+- Run the Kubernetes deployment manifest files
+```bash
+kc apply -f https://github.com/0x4D31/galah/deploy/galah.yml
+```
+- Create the openai-api-key secret with your OpenAI API key (replace `your-key`)
+```bash
+kc -n galah create secret generic openai-api-key --from-literal=api_key=your-key
+```
+
 ## Example Responses
 
 Here are some example responses:
