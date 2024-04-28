@@ -22,6 +22,8 @@ The prompt is the most crucial part of this honeypot! You can update the prompt 
 
 ## Getting Started
 
+### Local deployment
+
 - Ensure you have Go version 1.20+ installed.
 - Create an OpenAI API key from [here](https://platform.openai.com/api-keys).
 - If you want to serve over HTTPS, generate TLS certificates.
@@ -56,6 +58,27 @@ The prompt is the most crucial part of this honeypot! You can update the prompt 
 
 ^C2024/01/01 04:39:27 Received shutdown signal. Shutting down servers...
 2024/01/01 04:39:27 All servers shut down gracefully.
+```
+
+### Run in Docker
+
+- Ensure you have Docker CE or EE installed locally
+- Create an OpenAI API key from [here](https://platform.openai.com/api-keys).
+- Run the docker container
+
+```bash
+docker run -d -p 8080:8080 -p 8443:8443 -p 443:443 -p 8080:8080 -e API_KEY='OpenAI_API_Key_Here' infosecb/galah:latest
+```
+
+### Deploy in Kubernetes
+
+- Run the Kubernetes deployment manifest files
+```bash
+kubectl apply -f https://raw.githubusercontent.com/0x4D31/galah/main/deploy/galah.yml
+```
+- Create the openai-api-key secret with your OpenAI API key (replace `your-key`)
+```bash
+kubectl -n galah create secret generic openai-api-key --from-literal=api_key=your-key
 ```
 
 ## Example Responses

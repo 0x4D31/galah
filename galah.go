@@ -121,6 +121,13 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
+	apiKeyEnvVar := os.Getenv("API_KEY")
+
+	if apiKeyEnvVar != "" {
+		config.APIKey = apiKeyEnvVar
+		log.Printf("Using environment variable for OpenAI API key.")
+	}
+
 	db := initDB(args.DbPath)
 	defer db.Close()
 
