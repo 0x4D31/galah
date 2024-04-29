@@ -14,7 +14,6 @@ type App struct {
 	Config      *Config
 	DB          *sql.DB
 	OutputFile  string
-	Verbose     bool
 	Servers     map[uint16]*http.Server
 	Hostname    string
 	EnrichCache *enrich.Default
