@@ -27,6 +27,7 @@ var exampleOutput = `{"Headers": {"headerName1": "headerValue1", "headerName2": 
 func InitializeLLMClient(llm LLMConfig) (llms.Model, error) {
 	switch llm.Provider {
 	case "openai":
+		// TODO: Set temperature.
 		opts := []openai.Option{
 			openai.WithModel(llm.Model),
 			openai.WithToken(llm.APIKey),
