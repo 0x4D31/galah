@@ -26,8 +26,8 @@ import (
 )
 
 var args struct {
-	LLMProvider string `arg:"-p,--provider,env:LLM_PROVIDER,required" help:"LLM provider" default:"openai"`
-	LLMModel    string `arg:"-m,--model,env:LLM_MODEL,required" help:"LLM model" default:"gpt-3.5-turbo-1106"`
+	LLMProvider string `arg:"-p,--provider,env:LLM_PROVIDER" help:"LLM provider" default:"openai"`
+	LLMModel    string `arg:"-m,--model,env:LLM_MODEL" help:"LLM model" default:"gpt-3.5-turbo-1106"`
 	LLMAPIKey   string `arg:"-k,--api-key,env:LLM_API_KEY,required" help:"LLM API Key"`
 	Interface   string `arg:"-i,--interface" help:"interface to serve on"`
 	ConfigFile  string `arg:"-c,--config" help:"path to config file" default:"config.yaml"`
