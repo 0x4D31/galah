@@ -31,7 +31,7 @@ var args struct {
 	LLMAPIKey   string `arg:"-k,--api-key,env:LLM_API_KEY,required" help:"LLM API Key"`
 	Interface   string `arg:"-i,--interface" help:"interface to serve on"`
 	ConfigFile  string `arg:"-c,--config" help:"path to config file" default:"config.yaml"`
-	DbPath      string `arg:"-db,--database" help:"path to database file for cache" default:"cache.db"`
+	DBPath      string `arg:"-d,--database" help:"path to database file for cache" default:"cache.db"`
 	OutputFile  string `arg:"-o,--output" help:"path to output log file" default:"log.json"`
 	Verbose     bool   `arg:"-v,--verbose" help:"verbose mode"`
 }
@@ -97,7 +97,7 @@ func main() {
 		log.Fatalf("Error initializing the LLM client: %v", err)
 	}
 
-	db := initDB(args.DbPath)
+	db := initDB(args.DBPath)
 	defer db.Close()
 
 	hostname, err := getHostname()
@@ -128,8 +128,8 @@ func main() {
 	}
 }
 
-func initDB(dbPath string) *sql.DB {
-	db, err := sql.Open("sqlite3", dbPath)
+func initDB(path string) *sql.DB {
+	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil
 	}
