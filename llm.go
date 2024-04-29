@@ -24,7 +24,7 @@ var supportsJSONMode = map[string]bool{
 var exampleOutput = `{"Headers": {"headerName1": "headerValue1", "headerName2": "headerValue2"}, "Body": "httpBody"}`
 
 // InitializeLLMClient initializes the LLM client based on the configured provider and model name.
-func InitializeLLMClient(provider, model, apiKey string) (llms.Model, error) {
+func initializeLLMClient(provider, model, apiKey string) (llms.Model, error) {
 	switch provider {
 	case "openai":
 		// TODO: Set temperature.
@@ -41,7 +41,7 @@ func InitializeLLMClient(provider, model, apiKey string) (llms.Model, error) {
 	}
 }
 
-func (app *App) GenerateLLMResponse(r *http.Request) (string, error) {
+func (app *App) generateLLMResponse(r *http.Request) (string, error) {
 	ctx := context.Background()
 	systemPrompt := "Return JSON output and format your output as follows: " + exampleOutput
 
