@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -122,9 +123,8 @@ func main() {
 
 	app.ListenForShutdownSignals()
 
-	err = app.startServers()
-	if err != nil {
-		log.Println(err)
+	if err := app.startServers(); err != nil {
+		log.Fatalf("Application failed to start: %v", err)
 	}
 }
 
@@ -151,12 +151,14 @@ func initDB(path string) *sql.DB {
 
 func (app *App) startServers() error {
 	var g errgroup.Group
+	app.Servers = make(map[uint16]*http.Server)
+
+	mu := sync.Mutex{}
 
 	for _, pc := range app.Config.Ports {
 		pc := pc // Capture the loop variable
 		g.Go(func() error {
 			server := app.setupServer(pc)
-			app.Servers = make(map[uint16]*http.Server)
 
 			var err error
 			switch pc.Protocol {
@@ -167,9 +169,15 @@ func (app *App) startServers() error {
 			default:
 				err = fmt.Errorf("Unknown protocol for port %d", pc.Port)
 			}
+
 			if err != nil {
+				log.Printf("Error starting server on port %d: %v", pc.Port, err)
 				return err
 			}
+
+			mu.Lock()
+			app.Servers[pc.Port] = server
+			mu.Unlock()
 
 			return nil
 		})
@@ -205,7 +213,7 @@ func (app *App) startTLSServer(server *http.Server, pc PortConfig) error {
 	log.Printf("Starting HTTPS server on port %d with TLS profile: %s", pc.Port, pc.TLSProfile)
 	err := server.ListenAndServeTLS(tlsConfig.Certificate, tlsConfig.Key)
 	if err != nil {
-		return fmt.Errorf("Error starting HTTPS server on port %d: %v", pc.Port, err)
+		return err
 	}
 	return nil
 }
@@ -214,7 +222,7 @@ func (app *App) startHTTPServer(server *http.Server, pc PortConfig) error {
 	log.Printf("Starting HTTP server on port %d", pc.Port)
 	err := server.ListenAndServe()
 	if err != nil {
-		return fmt.Errorf("Error starting HTTP server on port %d: %v", pc.Port, err)
+		return err
 	}
 	return nil
 }
