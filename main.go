@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -21,16 +20,20 @@ import (
 	"time"
 
 	"github.com/0x4d31/galah/enrich"
+	"github.com/alexflint/go-arg"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/sync/errgroup"
 )
 
-type Args struct {
-	Interface  string
-	ConfigFile string
-	DbPath     string
-	OutputFile string
-	Verbose    bool
+var args struct {
+	LLMProvider string `arg:"-p,--provider,env:LLM_PROVIDER,required" help:"LLM provider" default:"openai"`
+	LLMModel    string `arg:"-m,--model,env:LLM_MODEL,required" help:"LLM model" default:"gpt-3.5-turbo-1106"`
+	LLMAPIKey   string `arg:"-k,--api-key,env:LLM_API_KEY,required" help:"LLM API Key"`
+	Interface   string `arg:"-i,--interface" help:"interface to serve on"`
+	ConfigFile  string `arg:"-c,--config" help:"path to config file" default:"config.yaml"`
+	DbPath      string `arg:"-db,--database" help:"path to database file for cache" default:"cache.db"`
+	OutputFile  string `arg:"-o,--output" help:"path to output log file" default:"log.json"`
+	Verbose     bool   `arg:"-v,--verbose" help:"verbose mode"`
 }
 
 var ignoreHeaders = map[string]bool{
@@ -73,22 +76,25 @@ func printBanner() {
 // Main function
 func main() {
 	printBanner()
-	args := parseArgs()
+	arg.MustParse(&args)
+
+	// Set the interface to the first non-loopback interface if not already specified.
+	if args.Interface == "" {
+		interfaceName, err := getDefaultInterface()
+		if err != nil {
+			log.Fatalf("Error getting default interface: %v", err)
+		}
+		args.Interface = interfaceName
+	}
 
 	config, err := LoadConfig(args.ConfigFile)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	model, err := InitializeLLMClient(config.LLM)
+	client, err := InitializeLLMClient(args.LLMProvider, args.LLMModel, args.LLMAPIKey)
 	if err != nil {
-		log.Fatalf("Error initializing the LLM: %v", err)
-	}
-
-	apiKeyEnvVar := os.Getenv("API_KEY")
-	if apiKeyEnvVar != "" {
-		config.LLM.APIKey = apiKeyEnvVar
-		log.Printf("Using environment variable for OpenAI API key.")
+		log.Fatalf("Error initializing the LLM client: %v", err)
 	}
 
 	db := initDB(args.DbPath)
@@ -105,7 +111,7 @@ func main() {
 	})
 
 	app := &App{
-		Model:       model,
+		Client:      client,
 		Config:      config,
 		DB:          db,
 		OutputFile:  args.OutputFile,
@@ -120,28 +126,6 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-}
-
-func parseArgs() *Args {
-	args := &Args{}
-	flag.StringVar(&args.Interface, "i", "", "interface to serve on")
-	flag.StringVar(&args.ConfigFile, "c", "config.yaml", "path to config file")
-	flag.StringVar(&args.DbPath, "db", "cache.db", "path to database file")
-	flag.StringVar(&args.OutputFile, "o", "log.json", "path to output log file")
-	flag.BoolVar(&args.Verbose, "v", false, "verbose mode")
-
-	flag.Parse()
-
-	// Set default interface to first non-loopback interface
-	if args.Interface == "" {
-		interfaceName, err := getDefaultInterface()
-		if err != nil {
-			log.Fatalf("Error getting default interface: %v", err)
-		}
-		args.Interface = interfaceName
-	}
-
-	return args
 }
 
 func initDB(dbPath string) *sql.DB {

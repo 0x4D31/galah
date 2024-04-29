@@ -9,6 +9,17 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+type App struct {
+	Client      llms.Model
+	Config      *Config
+	DB          *sql.DB
+	OutputFile  string
+	Verbose     bool
+	Servers     map[uint16]*http.Server
+	Hostname    string
+	EnrichCache *enrich.Default
+}
+
 type Event struct {
 	Timestamp    time.Time    `json:"timestamp"`
 	SrcIP        string       `json:"srcIP"`
@@ -38,15 +49,4 @@ type HTTPRequest struct {
 type HTTPResponse struct {
 	Headers map[string]string `json:"headers"`
 	Body    string            `json:"body"`
-}
-
-type App struct {
-	Model       llms.Model
-	Config      *Config
-	DB          *sql.DB
-	OutputFile  string
-	Verbose     bool
-	Servers     map[uint16]*http.Server
-	Hostname    string
-	EnrichCache *enrich.Default
 }

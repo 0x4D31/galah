@@ -23,16 +23,16 @@ var supportsJSONMode = map[string]bool{
 
 var exampleOutput = `{"Headers": {"headerName1": "headerValue1", "headerName2": "headerValue2"}, "Body": "httpBody"}`
 
-// InitializeLLMClient initializes the correct LLM client based on the configured model name.
-func InitializeLLMClient(llm LLMConfig) (llms.Model, error) {
-	switch llm.Provider {
+// InitializeLLMClient initializes the LLM client based on the configured provider and model name.
+func InitializeLLMClient(provider, model, apiKey string) (llms.Model, error) {
+	switch provider {
 	case "openai":
 		// TODO: Set temperature.
 		opts := []openai.Option{
-			openai.WithModel(llm.Model),
-			openai.WithToken(llm.APIKey),
+			openai.WithModel(model),
+			openai.WithToken(apiKey),
 		}
-		if supportsJSONMode[llm.Model] {
+		if supportsJSONMode[model] {
 			opts = append(opts, openai.WithResponseFormat(openai.ResponseFormatJSON))
 		}
 		return openai.New(opts...)
@@ -55,7 +55,7 @@ func (app *App) GenerateLLMResponse(r *http.Request) (string, error) {
 		llms.TextParts(llms.ChatMessageTypeSystem, systemPrompt),
 		llms.TextParts(llms.ChatMessageTypeHuman, userPrompt),
 	}
-	response, err := app.Model.GenerateContent(ctx, messages)
+	response, err := app.Client.GenerateContent(ctx, messages)
 
 	if len(response.Choices) > 0 {
 		return cleanResponse(response.Choices[0].Content), nil
