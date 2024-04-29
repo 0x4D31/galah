@@ -7,17 +7,10 @@ import (
 )
 
 type Config struct {
-	LLM            LLMConfig            `yaml:"llm"`
 	PromptTemplate string               `yaml:"prompt_template"`
 	CacheDuration  int                  `yaml:"cache_duration"`
 	Ports          []PortConfig         `yaml:"ports"`
 	TLS            map[string]TLSConfig `yaml:"tls"`
-}
-
-type LLMConfig struct {
-	Provider string `yaml:"provider"`
-	Model    string `yaml:"model"`
-	APIKey   string `yaml:"api_key"`
 }
 
 type TLSConfig struct {

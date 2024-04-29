@@ -1,9 +1,3 @@
-# LLM
-llm:
-  provider: "openai"
-  model: "gpt-4-turbo"
-  api_key: ks-7xvA26C6GEXAMPLE
-
 # Prompt Template
 prompt_template: |
   You are a web honeypot. Your task is to analyze the incoming HTTP requests, including all headers and body values, and generate an appropriate and enticing HTTP responses. You should try to emulate the applications that the HTTP clients are targeting. For example, if a request attempts to exploit a particular vulnerability, mimic the vulnerable app and generate a response to engage the attackers.
