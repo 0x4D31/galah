@@ -25,53 +25,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Event struct {
-	Timestamp    time.Time    `json:"timestamp"`
-	SrcIP        string       `json:"srcIP"`
-	SrcHost      string       `json:"srcHost"`
-	Tags         []string     `json:"tags"`
-	SrcPort      string       `json:"srcPort"`
-	SensorName   string       `json:"sensorName"`
-	Port         string       `json:"port"`
-	HTTPRequest  HTTPRequest  `json:"httpRequest"`
-	HTTPResponse HTTPResponse `json:"httpResponse"`
-	// TODO: Sessionize the incoming requests based on the sessionTTL and source IP.
-	// SessionID    string       `json:"sessionID"`
-}
-
-type HTTPRequest struct {
-	Method              string `json:"method"`
-	ProtocolVersion     string `json:"protocolVersion"`
-	Request             string `json:"request"`
-	UserAgent           string `json:"userAgent"`
-	Headers             string `json:"headers"`
-	HeadersSorted       string `json:"headersSorted"`
-	HeadersSortedSha256 string `json:"headersSortedSha256"`
-	Body                string `json:"body"`
-	BodySha256          string `json:"bodySha256"`
-}
-
-type HTTPResponse struct {
-	Headers map[string]string `json:"headers"`
-	Body    string            `json:"body"`
-}
-
 type Args struct {
 	Interface  string
 	ConfigFile string
 	DbPath     string
 	OutputFile string
 	Verbose    bool
-}
-
-type App struct {
-	Config      *Config
-	DB          *sql.DB
-	OutputFile  string
-	Verbose     bool
-	Servers     map[uint16]*http.Server
-	Hostname    string
-	EnrichCache *enrich.Default
 }
 
 var ignoreHeaders = map[string]bool{
@@ -121,10 +80,14 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	apiKeyEnvVar := os.Getenv("API_KEY")
+	model, err := InitializeLLMClient(config.LLM)
+	if err != nil {
+		log.Fatalf("Error initializing the LLM: %v", err)
+	}
 
+	apiKeyEnvVar := os.Getenv("API_KEY")
 	if apiKeyEnvVar != "" {
-		config.APIKey = apiKeyEnvVar
+		config.LLM.APIKey = apiKeyEnvVar
 		log.Printf("Using environment variable for OpenAI API key.")
 	}
 
@@ -142,6 +105,7 @@ func main() {
 	})
 
 	app := &App{
+		Model:       model,
 		Config:      config,
 		DB:          db,
 		OutputFile:  args.OutputFile,
@@ -415,7 +379,7 @@ func getDBKey(r *http.Request, port string) string {
 }
 
 func (app *App) generateAndCacheResponse(r *http.Request, port string) ([]byte, error) {
-	responseString, err := GenerateOpenAIResponse(app.Config, r)
+	responseString, err := app.GenerateLLMResponse(r)
 	if err != nil {
 		log.Print(err)
 		return nil, err
