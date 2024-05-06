@@ -3,13 +3,10 @@ package main
 import (
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	// TODO: Remove api_key from the config file. Set it as env var instead.
-	APIKey         string               `yaml:"api_key"`
-	Model          string               `yaml:"model"`
 	PromptTemplate string               `yaml:"prompt_template"`
 	CacheDuration  int                  `yaml:"cache_duration"`
 	Ports          []PortConfig         `yaml:"ports"`

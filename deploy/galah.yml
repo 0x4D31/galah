@@ -26,10 +26,10 @@ spec:
       - name: galah
         image: infosecb/galah:latest
         env:
-        - name: API_KEY
+        - name: LLM_API_KEY
           valueFrom:
             secretKeyRef:
-              name: openai-api-key
+              name: llm-api-key
               key: api_key
         ports:
         - containerPort: 8080
