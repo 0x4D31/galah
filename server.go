@@ -116,6 +116,7 @@ func (app *App) handleRequest(w http.ResponseWriter, r *http.Request, serverAddr
 	}
 
 	logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
+
 	// Check the response cache
 	response, err := app.checkCache(r, port)
 	if err != nil {
@@ -169,13 +170,16 @@ func isExcludedHeader(headerKey string) bool {
 	return ignoreHeaders[strings.ToLower(headerKey)]
 }
 
-func (app *App) listenForShutdownSignals(ctx context.Context) {
+func (app *App) listenForShutdownSignals() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		<-sig
 		logger.Infof("received shutdown signal. shutting down servers...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
 		for _, server := range app.Servers {
 			if err := server.Shutdown(ctx); err != nil {

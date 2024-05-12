@@ -77,7 +77,7 @@ func main() {
 	}
 	app.Client = client
 
-	app.listenForShutdownSignals(ctx)
+	app.listenForShutdownSignals()
 	if err := app.startServers(); err != nil {
 		logger.Fatalf("application failed to start: %s", err)
 	}
