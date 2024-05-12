@@ -26,6 +26,7 @@ type Event struct {
 	Port         string       `json:"port"`
 	HTTPRequest  HTTPRequest  `json:"httpRequest"`
 	HTTPResponse HTTPResponse `json:"httpResponse"`
+	LLM          LLM          `json:"LLM"`
 	// TODO: Sessionize the incoming requests based on the sessionTTL and source IP.
 	// SessionID    string       `json:"sessionID"`
 }
@@ -45,6 +46,11 @@ type HTTPRequest struct {
 type HTTPResponse struct {
 	Headers map[string]string `json:"headers"`
 	Body    string            `json:"body"`
+}
+
+type LLM struct {
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
 }
 
 var logger = logrus.StandardLogger()
@@ -106,6 +112,10 @@ func (app *App) makeEvent(req *http.Request, resp HTTPResponse, port string) Eve
 		Port:         port,
 		HTTPRequest:  httpRequest,
 		HTTPResponse: resp,
+		LLM: LLM{
+			Provider: app.LLMConfig.Provider,
+			Model:    app.LLMConfig.Model,
+		},
 	}
 }
 
