@@ -114,14 +114,16 @@ func (app *App) handleRequest(w http.ResponseWriter, r *http.Request, serverAddr
 	if err != nil {
 		port = ""
 	}
-
 	logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
 
 	// Check the response cache
 	response, err := app.checkCache(r, port)
 	if err != nil {
 		logger.Infof("request cache miss for %q: %s", r.URL.String(), err)
-		// Call the LLM API to generate response
+	}
+
+	// If the cache missed or returned an error, generate a new response
+	if response == nil {
 		responseString, err := app.generateLLMResponse(r)
 		if err != nil {
 			logger.Errorf("error generating response: %s", err)
@@ -133,7 +135,9 @@ func (app *App) handleRequest(w http.ResponseWriter, r *http.Request, serverAddr
 		// Store the generated response in the cache
 		response = []byte(responseString)
 		key := getCacheKey(r, port)
-		err = app.storeResponse(key, response)
+		if err := app.storeResponse(key, response); err != nil {
+			logger.Errorf("error storing response in cache: %s", err)
+		}
 	}
 
 	// Parse the JSON-encoded data into a HTTPResponse struct, and send it to the client.

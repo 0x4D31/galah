@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/go-playground/validator"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/googleai"
 	"github.com/tmc/langchaingo/llms/googleai/vertex"
@@ -84,7 +86,14 @@ func (app *App) generateLLMResponse(r *http.Request) (string, error) {
 	if len(response.Choices) == 0 {
 		return "", errors.New("no valid response from the model")
 	}
-	return cleanResponse(response.Choices[0].Content), nil
+	resp := cleanResponse(response.Choices[0].Content)
+	if err := validateJSON(resp); err != nil {
+		logger.Errorf("invalid response: %s", err)
+		logger.Debugf("invalid generated response: %s", resp)
+		return "", err
+	}
+
+	return resp, nil
 }
 
 func (app *App) createMessageContent(r *http.Request) ([]llms.MessageContent, error) {
@@ -113,4 +122,24 @@ func cleanResponse(input string) string {
 	cleaned := re.ReplaceAllString(input, "")
 
 	return strings.TrimSpace(cleaned)
+}
+
+func validateJSON(jsonStr string) error {
+	jsonBytes := []byte(jsonStr)
+	// Check if the JSON format is correct
+	if !json.Valid(jsonBytes) {
+		return fmt.Errorf("input is not valid JSON")
+	}
+	// Try to unmarshal the JSON into the struct
+	var resp HTTPResponse
+	if err := json.Unmarshal(jsonBytes, &resp); err != nil {
+		return fmt.Errorf("error unmarshalling JSON: %s", err)
+	}
+	// Validate the struct using the `validator` package
+	validate := validator.New()
+	if err := validate.Struct(resp); err != nil {
+		return fmt.Errorf("validation error: %s", err)
+	}
+
+	return nil
 }

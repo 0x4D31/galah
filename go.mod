@@ -15,6 +15,13 @@ require (
 )
 
 require (
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/leodido/go-urn v1.4.0 // indirect
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+)
+
+require (
 	cloud.google.com/go v0.112.1 // indirect
 	cloud.google.com/go/ai v0.3.5-0.20240409161017-ce55ad694f21 // indirect
 	cloud.google.com/go/aiplatform v1.60.0 // indirect
@@ -28,6 +35,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/generative-ai-go v0.11.0 // indirect

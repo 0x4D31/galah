@@ -44,8 +44,8 @@ type HTTPRequest struct {
 }
 
 type HTTPResponse struct {
-	Headers map[string]string `json:"headers"`
-	Body    string            `json:"body"`
+	Headers map[string]string `json:"headers" validate:"required"`
+	Body    string            `json:"body" validate:"required"`
 }
 
 type LLM struct {
