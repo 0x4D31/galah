@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 )
+
+var mutex sync.Mutex
 
 func initializeCache(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path)
@@ -29,6 +32,9 @@ func initializeCache(path string) (*sql.DB, error) {
 }
 
 func (app *App) checkCache(r *http.Request, port string) ([]byte, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	cacheKey := getCacheKey(r, port)
 	var response []byte
 	var cachedAt time.Time
@@ -53,6 +59,9 @@ func getCacheKey(r *http.Request, port string) string {
 }
 
 func (app *App) storeResponse(key string, resp []byte) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	currentTime := time.Now()
 	_, err := app.DB.Exec("INSERT OR REPLACE INTO cache (cachedAt, key, response) VALUES (?, ?, ?)", currentTime, key, resp)
 	if err != nil {
