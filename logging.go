@@ -49,8 +49,9 @@ type HTTPResponse struct {
 }
 
 type LLM struct {
-	Provider string `json:"provider"`
-	Model    string `json:"model"`
+	Provider    string  `json:"provider"`
+	Model       string  `json:"model"`
+	Temperature float64 `json:"temperature"`
 }
 
 var logger = logrus.StandardLogger()
@@ -113,8 +114,9 @@ func (app *App) makeEvent(req *http.Request, resp HTTPResponse, port string) Eve
 		HTTPRequest:  httpRequest,
 		HTTPResponse: resp,
 		LLM: LLM{
-			Provider: app.LLMConfig.Provider,
-			Model:    app.LLMConfig.Model,
+			Provider:    app.LLMConfig.Provider,
+			Model:       app.LLMConfig.Model,
+			Temperature: app.LLMConfig.Temperature,
 		},
 	}
 }
