@@ -130,7 +130,7 @@ func (app *App) handleRequest(w http.ResponseWriter, r *http.Request, serverAddr
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		logger.Infof("generated HTTP response: %s", responseString)
+		logger.Infof("generated HTTP response: %s", strings.ReplaceAll(responseString, "\n", " "))
 
 		// Store the generated response in the cache
 		response = []byte(responseString)
