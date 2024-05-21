@@ -26,7 +26,7 @@ func TestStartServers(t *testing.T) {
 		},
 	}
 
-	app := &App{Config: &Config{}}
+	app := &App{Config: Config{}}
 
 	for _, tt := range tests {
 		app.Config.Ports = []PortConfig{tt.portConfig}
@@ -57,7 +57,7 @@ func TestStartHTTPServer(t *testing.T) {
 		},
 	}
 
-	app := &App{Config: &Config{}}
+	app := &App{Config: Config{}}
 
 	// Start a dummy server on port 8080 to occupy it
 	dummyServer := &http.Server{Addr: ":8080"}
@@ -113,7 +113,7 @@ func TestStartTLSServer(t *testing.T) {
 	}
 
 	app := &App{
-		Config: &Config{
+		Config: Config{
 			TLS: map[string]TLSConfig{
 				"invalidTLSProfile": {
 					Certificate: "non-existent_cert.pem",

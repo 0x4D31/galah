@@ -14,27 +14,28 @@ import (
 )
 
 type App struct {
+	Config      Config
+	LLMConfig   LLMConfig
 	Client      llms.Model
-	Config      *Config
-	DB          *sql.DB
-	EnrichCache *enrich.Default
-	Servers     map[uint16]*http.Server
+	Cache       *sql.DB
 	OutputFile  string
 	Hostname    string
-	LLMConfig   LLMConfig
+	EnrichCache *enrich.Default
+	Servers     map[uint16]*http.Server
 }
 
 var args struct {
-	LLMAPIKey        string `arg:"-k,--api-key,env:LLM_API_KEY,required" help:"LLM API Key"`
-	LLMProvider      string `arg:"-p,--provider,env:LLM_PROVIDER" help:"LLM provider" default:"openai"`
-	LLMModel         string `arg:"-m,--model,env:LLM_MODEL" help:"LLM model" default:"gpt-3.5-turbo-1106"`
-	LLMCloudProject  string `arg:"--cloud-project,env:LLM_CLOUD_PROJECT" help:"LLM cloud project (e.g. for GCP Vertex)"`
-	LLMCloudLocation string `arg:"--cloud-location,env:LLM_CLOUD_LOCATION" help:"LLM cloud location (e.g. for GCP Vertex)"`
-	Interface        string `arg:"-i,--interface" help:"Interface to serve on"`
-	ConfigFile       string `arg:"-c,--config" help:"Path to config file" default:"config.yaml"`
-	DBPath           string `arg:"-d,--database" help:"Path to database file for cache" default:"cache.db"`
-	OutputFile       string `arg:"-o,--output" help:"Path to output log file" default:"log.json"`
-	LogLevel         string `arg:"-l,--log-level" help:"Log level (debug, info, error, fatal)" default:"info"`
+	LLMProvider      string  `arg:"-p,--provider,env:LLM_PROVIDER,required" help:"LLM provider"`
+	LLMModel         string  `arg:"-m,--model,env:LLM_MODEL,required" help:"LLM model"`
+	LLMTemperature   float64 `arg:"-t,--temperature,env:LLM_TEMPERATURE" help:"LLM sampling temperature" default:"1"`
+	LLMAPIKey        string  `arg:"-k,--api-key,env:LLM_API_KEY" help:"LLM API Key"`
+	LLMCloudProject  string  `arg:"--cloud-project,env:LLM_CLOUD_PROJECT" help:"LLM cloud project ID (required for GCP Vertex)"`
+	LLMCloudLocation string  `arg:"--cloud-location,env:LLM_CLOUD_LOCATION" help:"LLM cloud location region (required for GCP Vertex)"`
+	ConfigFile       string  `arg:"-c,--config" help:"Path to config file" default:"config.yaml"`
+	DatabasePath     string  `arg:"-d,--database" help:"Path to database file for cache" default:"cache.db"`
+	Interface        string  `arg:"-i,--interface" help:"Interface to serve on"`
+	OutputFile       string  `arg:"-o,--output" help:"Path to output log file" default:"log.json"`
+	LogLevel         string  `arg:"-l,--log-level" help:"Log level (debug, info, error, fatal)" default:"info"`
 }
 
 const (
@@ -69,7 +70,7 @@ func main() {
 	if err != nil {
 		logger.Fatalln(err)
 	}
-	defer app.DB.Close()
+	defer app.Cache.Close()
 
 	client, err := app.initializeLLMClient(ctx)
 	if err != nil {
@@ -98,7 +99,7 @@ func initializeApp() (*App, error) {
 		return nil, fmt.Errorf("error loading config: %s", err)
 	}
 
-	db, err := initializeCache(args.DBPath)
+	cache, err := initializeCache(args.DatabasePath)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing the cache database: %s", err)
 	}
@@ -115,14 +116,15 @@ func initializeApp() (*App, error) {
 
 	return &App{
 		Config:      config,
-		DB:          db,
+		Cache:       cache,
 		EnrichCache: enrichCache,
 		OutputFile:  args.OutputFile,
 		Hostname:    hostname,
 		LLMConfig: LLMConfig{
-			APIKey:        args.LLMAPIKey,
 			Provider:      args.LLMProvider,
 			Model:         args.LLMModel,
+			Temperature:   args.LLMTemperature,
+			APIKey:        args.LLMAPIKey,
 			CloudProject:  args.LLMCloudProject,
 			CloudLocation: args.LLMCloudLocation,
 		},

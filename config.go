@@ -24,17 +24,17 @@ type PortConfig struct {
 	TLSProfile string `yaml:"tls_profile,omitempty"`
 }
 
-func LoadConfig(file string) (*Config, error) {
-	config := &Config{}
+func LoadConfig(file string) (Config, error) {
+	var config Config
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return Config{}, err
 	}
 
-	err = yaml.Unmarshal(data, config)
+	err = yaml.Unmarshal(data, &config)
 	if err != nil {
-		return nil, err
+		return Config{}, err
 	}
 
 	return config, nil

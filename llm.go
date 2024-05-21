@@ -18,18 +18,12 @@ import (
 )
 
 type LLMConfig struct {
-	APIKey        string
 	Provider      string
 	Model         string
+	Temperature   float64
+	APIKey        string
 	CloudProject  string
 	CloudLocation string
-}
-
-var supportsJSONMode = map[string]bool{
-	"gpt-4-turbo":            true,
-	"gpt-4-turbo-2024-04-09": true,
-	"gpt-4-1106-preview":     true,
-	"gpt-3.5-turbo-1106":     true,
 }
 
 var supportsSystemPrompt = map[string]bool{
@@ -43,13 +37,12 @@ const systemPrompt = `Return JSON output and format your output as follows: ` +
 func (app *App) initializeLLMClient(ctx context.Context) (llms.Model, error) {
 	switch app.LLMConfig.Provider {
 	case "openai":
-		// TODO: Set temperature.
+		if app.LLMConfig.APIKey == "" {
+			return nil, fmt.Errorf("api key is required")
+		}
 		opts := []openai.Option{
 			openai.WithModel(app.LLMConfig.Model),
 			openai.WithToken(app.LLMConfig.APIKey),
-		}
-		if supportsJSONMode[app.LLMConfig.Model] {
-			opts = append(opts, openai.WithResponseFormat(openai.ResponseFormatJSON))
 		}
 		m, err := openai.New(opts...)
 		if err != nil {
@@ -57,6 +50,9 @@ func (app *App) initializeLLMClient(ctx context.Context) (llms.Model, error) {
 		}
 		return m, nil
 	case "gcp-vertex":
+		if app.LLMConfig.CloudLocation == "" || app.LLMConfig.CloudProject == "" {
+			return nil, fmt.Errorf("cloud project id and location are required")
+		}
 		opts := []googleai.Option{
 			googleai.WithDefaultModel(app.LLMConfig.Model),
 			googleai.WithCloudProject(app.LLMConfig.CloudProject),
@@ -79,12 +75,17 @@ func (app *App) generateLLMResponse(r *http.Request) (string, error) {
 		return "", err
 	}
 
-	response, err := app.Client.GenerateContent(ctx, messages)
+	response, err := app.Client.GenerateContent(
+		ctx,
+		messages,
+		llms.WithJSONMode(),
+		llms.WithTemperature(app.LLMConfig.Temperature),
+	)
 	if err != nil {
 		return "", err
 	}
 	if len(response.Choices) == 0 {
-		return "", errors.New("no valid response from the model")
+		return "", errors.New("empty response from the model")
 	}
 	resp := cleanResponse(response.Choices[0].Content)
 	if err := validateJSON(resp); err != nil {

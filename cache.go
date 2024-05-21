@@ -40,7 +40,7 @@ func (app *App) checkCache(r *http.Request, port string) ([]byte, error) {
 	var cachedAt time.Time
 
 	// Order by cachedAt DESC to get the most recent record.
-	row := app.DB.QueryRow("SELECT cachedAt, response FROM cache WHERE key = ? ORDER BY cachedAt DESC LIMIT 1", cacheKey)
+	row := app.Cache.QueryRow("SELECT cachedAt, response FROM cache WHERE key = ? ORDER BY cachedAt DESC LIMIT 1", cacheKey)
 
 	err := row.Scan(&cachedAt, &response)
 	if err == sql.ErrNoRows {
@@ -63,7 +63,7 @@ func (app *App) storeResponse(key string, resp []byte) error {
 	defer mutex.Unlock()
 
 	currentTime := time.Now()
-	_, err := app.DB.Exec("INSERT OR REPLACE INTO cache (cachedAt, key, response) VALUES (?, ?, ?)", currentTime, key, resp)
+	_, err := app.Cache.Exec("INSERT OR REPLACE INTO cache (cachedAt, key, response) VALUES (?, ?, ?)", currentTime, key, resp)
 	if err != nil {
 		return err
 	}
