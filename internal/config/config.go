@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -7,9 +7,9 @@ import (
 )
 
 type Config struct {
-	PromptTemplate string               `yaml:"prompt_template"`
 	CacheDuration  int                  `yaml:"cache_duration"`
 	Ports          []PortConfig         `yaml:"ports"`
+	PromptTemplate string               `yaml:"prompt_template"`
 	TLS            map[string]TLSConfig `yaml:"tls"`
 }
 
