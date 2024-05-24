@@ -40,10 +40,12 @@ func New(ctx context.Context, config Config) (llms.Model, error) {
 	switch config.Provider {
 	case "openai":
 		return initOpenAIClient(config)
-	case "gcp-vertex":
-		return initVertexClient(ctx, config)
 	case "googleai":
 		return initGoogleAIClient(ctx, config)
+	case "gcp-vertex":
+		return initVertexClient(ctx, config)
+	case "anthropic":
+		return initAnthropicClient(config)
 	default:
 		return nil, errors.New("unsupported llm provider")
 	}
