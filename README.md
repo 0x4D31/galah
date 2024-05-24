@@ -1,4 +1,4 @@
-<img align="left" src="images/galah.png" width="200px">
+<img align="left" src="docs/assets/images/galah.png" width="200px">
 
 TL;DR: Galah (/ɡəˈlɑː/ - pronounced ‘guh-laa’) is an LLM-powered web honeypot designed to mimic various applications and dynamically respond to arbitrary HTTP requests. Galah supports multiple LLM providers, including OpenAI.
 
