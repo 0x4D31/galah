@@ -12,9 +12,6 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/llms/googleai"
-	"github.com/tmc/langchaingo/llms/googleai/vertex"
-	"github.com/tmc/langchaingo/llms/openai"
 )
 
 type Config struct {
@@ -42,32 +39,11 @@ const systemPrompt = `Return JSON output and format your output as follows: ` +
 func New(ctx context.Context, config Config) (llms.Model, error) {
 	switch config.Provider {
 	case "openai":
-		if config.APIKey == "" {
-			return nil, fmt.Errorf("api key is required")
-		}
-		opts := []openai.Option{
-			openai.WithModel(config.Model),
-			openai.WithToken(config.APIKey),
-		}
-		m, err := openai.New(opts...)
-		if err != nil {
-			return nil, err
-		}
-		return m, nil
+		return initOpenAIClient(config)
 	case "gcp-vertex":
-		if config.CloudLocation == "" || config.CloudProject == "" {
-			return nil, fmt.Errorf("cloud project id and location are required")
-		}
-		opts := []googleai.Option{
-			googleai.WithDefaultModel(config.Model),
-			googleai.WithCloudProject(config.CloudProject),
-			googleai.WithCloudLocation(config.CloudLocation),
-		}
-		m, err := vertex.New(ctx, opts...)
-		if err != nil {
-			return nil, err
-		}
-		return m, nil
+		return initVertexClient(ctx, config)
+	case "googleai":
+		return initGoogleAIClient(ctx, config)
 	default:
 		return nil, errors.New("unsupported llm provider")
 	}
