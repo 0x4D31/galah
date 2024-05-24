@@ -13,7 +13,7 @@ The prompt configuration is key in this honeypot. While you can update the promp
 ### Local Deployment
 
 - Ensure you have Go version 1.22+ installed.
-- Depending on your LLM provider, create an API key (e.g. from [here](https://platform.openai.com/api-keys) for OpenAI) or set up authentication credentials (e.g. Application Default Credentials for Google Cloud).
+- Depending on your LLM provider, create an API key (e.g., from [here](https://platform.openai.com/api-keys) for OpenAI and [here](https://aistudio.google.com/app/apikey) for GoogleAI Studio) or set up authentication credentials (e.g., Application Default Credentials for GCP's Vertex AI).
 - If you want to serve HTTPS ports, generate TLS certificates.
 - Clone the repo and install the dependencies.
 - Update the `config.yaml` file if needed.
@@ -35,9 +35,21 @@ The prompt configuration is key in this honeypot. While you can update the promp
   llm-based web honeypot // version 0.9
         author: Adel "0x4D31" Karimi
 
-Usage: galah [--config-file CONFIG-FILE] [--database-file DATABASE-FILE] [--event-log-file EVENT-LOG-FILE] [--log-level LOG-LEVEL] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] --model MODEL --provider PROVIDER [--temperature TEMPERATURE]
+Usage: galah --provider PROVIDER --model MODEL [--temperature TEMPERATURE] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] [--config-file CONFIG-FILE] [--database-file DATABASE-FILE] [--event-log-file EVENT-LOG-FILE] [--log-level LOG-LEVEL]
 
 Options:
+  --provider PROVIDER, -p PROVIDER
+                         LLM provider (openai, googleai, gcp-vertex) [env: LLM_PROVIDER]
+  --model MODEL, -m MODEL
+                         LLM model (e.g. gpt-3.5-turbo-1106, gemini-1.5-pro) [env: LLM_MODEL]
+  --temperature TEMPERATURE, -t TEMPERATURE
+                         LLM sampling temperature (0-2). Higher values make the output more random [default: 1, env: LLM_TEMPERATURE]
+  --api-key API-KEY, -k API-KEY
+                         LLM API Key [env: LLM_API_KEY]
+  --cloud-location CLOUD-LOCATION
+                         LLM cloud location region (required for GCP's Vertex AI) [env: LLM_CLOUD_LOCATION]
+  --cloud-project CLOUD-PROJECT
+                         LLM cloud project ID (required for GCP's Vertex AI) [env: LLM_CLOUD_PROJECT]
   --config-file CONFIG-FILE, -c CONFIG-FILE
                          Path to config file [default: config/config.yaml]
   --database-file DATABASE-FILE, -d DATABASE-FILE
@@ -46,18 +58,6 @@ Options:
                          Path to event log file [default: event_log.json]
   --log-level LOG-LEVEL, -l LOG-LEVEL
                          Log level (debug, info, error, fatal) [default: info]
-  --api-key API-KEY, -k API-KEY
-                         LLM API Key [env: LLM_API_KEY]
-  --cloud-location CLOUD-LOCATION
-                         LLM cloud location region (required for GCP Vertex) [env: LLM_CLOUD_LOCATION]
-  --cloud-project CLOUD-PROJECT
-                         LLM cloud project ID (required for GCP Vertex) [env: LLM_CLOUD_PROJECT]
-  --model MODEL, -m MODEL
-                         LLM model (e.g. gpt-3.5-turbo-1106, gemini-1.5-pro-preview-0409) [env: LLM_MODEL]
-  --provider PROVIDER, -p PROVIDER
-                         LLM provider (openai, gcp-vertex) [env: LLM_PROVIDER]
-  --temperature TEMPERATURE, -t TEMPERATURE
-                         LLM sampling temperature (0-2). Higher values make the output more random [default: 1, env: LLM_TEMPERATURE]
   --help, -h             display this help and exit
 ```
 
