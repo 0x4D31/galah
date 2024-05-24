@@ -12,8 +12,8 @@ The prompt configuration is key in this honeypot. While you can update the promp
 
 ### Local Deployment
 
-- Ensure you have Go version 1.20+ installed.
-- Create an LLM API key (e.g. from [here](https://platform.openai.com/api-keys) for OpenAI).
+- Ensure you have Go version 1.22+ installed.
+- Depending on your LLM provider, create an API key (e.g. from [here](https://platform.openai.com/api-keys) for OpenAI) or set up authentication credentials (e.g. Application Default Credentials for Google Cloud).
 - If you want to serve HTTPS ports, generate TLS certificates.
 - Clone the repo and install the dependencies.
 - Update the `config.yaml` file if needed.
@@ -23,7 +23,7 @@ The prompt configuration is key in this honeypot. While you can update the promp
 % git clone git@github.com:0x4D31/galah.git
 % cd galah
 % go mod download
-% go build  
+% go build -o galah ./cmd/galah
 % export LLM_API_KEY=your-api-key
 % ./galah --help
 
@@ -32,28 +32,32 @@ The prompt configuration is key in this honeypot. While you can update the promp
 ██   ███ ███████ ██      ███████ ███████ 
 ██    ██ ██   ██ ██      ██   ██ ██   ██ 
  ██████  ██   ██ ███████ ██   ██ ██   ██ 
-  llm-based web honeypot // version 1.1
-       author: Adel "0x4D31" Karimi
+  llm-based web honeypot // version 0.9
+        author: Adel "0x4D31" Karimi
 
-Usage: galah --api-key API-KEY [--provider PROVIDER] [--model MODEL] [--interface INTERFACE] [--config CONFIG] [--database DATABASE] [--output OUTPUT] [--log-level LOG-LEVEL]
+Usage: galah [--config-file CONFIG-FILE] [--database-file DATABASE-FILE] [--event-log-file EVENT-LOG-FILE] [--log-level LOG-LEVEL] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] --model MODEL --provider PROVIDER [--temperature TEMPERATURE]
 
 Options:
-  --api-key API-KEY, -k API-KEY
-                         LLM API Key [env: LLM_API_KEY]
-  --provider PROVIDER, -p PROVIDER
-                         LLM provider [default: openai, env: LLM_PROVIDER]
-  --model MODEL, -m MODEL
-                         LLM model [default: gpt-3.5-turbo-1106, env: LLM_MODEL]
-  --interface INTERFACE, -i INTERFACE
-                         Interface to serve on
-  --config CONFIG, -c CONFIG
-                         Path to config file [default: config.yaml]
-  --database DATABASE, -d DATABASE
-                         Path to database file for cache [default: cache.db]
-  --output OUTPUT, -o OUTPUT
-                         Path to output log file [default: log.json]
+  --config-file CONFIG-FILE, -c CONFIG-FILE
+                         Path to config file [default: config/config.yaml]
+  --database-file DATABASE-FILE, -d DATABASE-FILE
+                         Path to database file for response caching [default: cache.db]
+  --event-log-file EVENT-LOG-FILE, -o EVENT-LOG-FILE
+                         Path to event log file [default: event_log.json]
   --log-level LOG-LEVEL, -l LOG-LEVEL
                          Log level (debug, info, error, fatal) [default: info]
+  --api-key API-KEY, -k API-KEY
+                         LLM API Key [env: LLM_API_KEY]
+  --cloud-location CLOUD-LOCATION
+                         LLM cloud location region (required for GCP Vertex) [env: LLM_CLOUD_LOCATION]
+  --cloud-project CLOUD-PROJECT
+                         LLM cloud project ID (required for GCP Vertex) [env: LLM_CLOUD_PROJECT]
+  --model MODEL, -m MODEL
+                         LLM model (e.g. gpt-3.5-turbo-1106, gemini-1.5-pro-preview-0409) [env: LLM_MODEL]
+  --provider PROVIDER, -p PROVIDER
+                         LLM provider (openai, gcp-vertex) [env: LLM_PROVIDER]
+  --temperature TEMPERATURE, -t TEMPERATURE
+                         LLM sampling temperature (0-2). Higher values make the output more random [default: 1, env: LLM_TEMPERATURE]
   --help, -h             display this help and exit
 ```
 
@@ -70,7 +74,7 @@ Options:
 % mkdir logs
 % export LLM_API_KEY=your-api-key
 % docker build -t galah-image .
-% docker run -d -p 8080:8080 -v /Users/test/galah/logs:/galah/logs -e LLM_API_KEY galah-image -o logs/galah.json
+% docker run -d --name galah-container -p 8080:8080 -v $(pwd)/logs:/galah/logs -e LLM_API_KEY galah-image -o logs/galah.json -p openai -m gpt-3.5-turbo-1106
 ```
 
 ## Example Responses
