@@ -1,4 +1,4 @@
-package main
+package llm
 
 import (
 	"context"
@@ -17,13 +17,18 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
-type LLMConfig struct {
-	Provider      string
-	Model         string
-	Temperature   float64
+type Config struct {
 	APIKey        string
-	CloudProject  string
 	CloudLocation string
+	CloudProject  string
+	Model         string
+	Provider      string
+	Temperature   float64
+}
+
+type JSONResponse struct {
+	Headers map[string]string `json:"headers" validate:"required"`
+	Body    string            `json:"body" validate:"required"`
 }
 
 var supportsSystemPrompt = map[string]bool{
@@ -33,16 +38,16 @@ var supportsSystemPrompt = map[string]bool{
 const systemPrompt = `Return JSON output and format your output as follows: ` +
 	`{"Headers": {"headerName1": "headerValue1", "headerName2": "headerValue2"}, "Body": "httpBody"}`
 
-// InitializeLLMClient initializes the LLM client based on the configured provider and model name.
-func (app *App) initializeLLMClient(ctx context.Context) (llms.Model, error) {
-	switch app.LLMConfig.Provider {
+// New initializes the LLM client based on the configured provider and model name.
+func New(ctx context.Context, config Config) (llms.Model, error) {
+	switch config.Provider {
 	case "openai":
-		if app.LLMConfig.APIKey == "" {
+		if config.APIKey == "" {
 			return nil, fmt.Errorf("api key is required")
 		}
 		opts := []openai.Option{
-			openai.WithModel(app.LLMConfig.Model),
-			openai.WithToken(app.LLMConfig.APIKey),
+			openai.WithModel(config.Model),
+			openai.WithToken(config.APIKey),
 		}
 		m, err := openai.New(opts...)
 		if err != nil {
@@ -50,13 +55,13 @@ func (app *App) initializeLLMClient(ctx context.Context) (llms.Model, error) {
 		}
 		return m, nil
 	case "gcp-vertex":
-		if app.LLMConfig.CloudLocation == "" || app.LLMConfig.CloudProject == "" {
+		if config.CloudLocation == "" || config.CloudProject == "" {
 			return nil, fmt.Errorf("cloud project id and location are required")
 		}
 		opts := []googleai.Option{
-			googleai.WithDefaultModel(app.LLMConfig.Model),
-			googleai.WithCloudProject(app.LLMConfig.CloudProject),
-			googleai.WithCloudLocation(app.LLMConfig.CloudLocation),
+			googleai.WithDefaultModel(config.Model),
+			googleai.WithCloudProject(config.CloudProject),
+			googleai.WithCloudLocation(config.CloudLocation),
 		}
 		m, err := vertex.New(ctx, opts...)
 		if err != nil {
@@ -68,43 +73,42 @@ func (app *App) initializeLLMClient(ctx context.Context) (llms.Model, error) {
 	}
 }
 
-func (app *App) generateLLMResponse(r *http.Request) (string, error) {
-	ctx := r.Context()
-	messages, err := app.createMessageContent(r)
-	if err != nil {
-		return "", err
-	}
-
-	response, err := app.Client.GenerateContent(
+func GenerateLLMResponse(ctx context.Context, model llms.Model, temperature float64, messages []llms.MessageContent) (string, error) {
+	response, err := model.GenerateContent(
 		ctx,
 		messages,
 		llms.WithJSONMode(),
-		llms.WithTemperature(app.LLMConfig.Temperature),
+		llms.WithTemperature(temperature),
 	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("contentGenerationError: %s", err)
+	}
+	if response == nil {
+		return "", errors.New("emptyLLMResponse: response is nil")
 	}
 	if len(response.Choices) == 0 {
-		return "", errors.New("empty response from the model")
+		return "", errors.New("emptyLLMResponse: no choices available")
 	}
-	resp := cleanResponse(response.Choices[0].Content)
-	if err := validateJSON(resp); err != nil {
-		logger.Errorf("invalid response: %s", err)
-		logger.Debugf("invalid generated response: %s", resp)
-		return "", err
+	content := response.Choices[0].Content
+	if content == "" {
+		return "", errors.New("emptyLLMResponse: content of first choice is empty")
+	}
+	resp := cleanResponse(content)
+	if err := ValidateJSON(resp); err != nil {
+		return resp, fmt.Errorf("invalidJSONResponse: %s", err)
 	}
 
 	return resp, nil
 }
 
-func (app *App) createMessageContent(r *http.Request) ([]llms.MessageContent, error) {
+func CreateMessageContent(r *http.Request, promptTmpl string, provider string) ([]llms.MessageContent, error) {
 	httpReq, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		return nil, err
 	}
-	userPrompt := fmt.Sprintf(app.Config.PromptTemplate, httpReq)
+	userPrompt := fmt.Sprintf(promptTmpl, httpReq)
 
-	if supportsSystemPrompt[app.LLMConfig.Provider] {
+	if supportsSystemPrompt[provider] {
 		return []llms.MessageContent{
 			llms.TextParts(llms.ChatMessageTypeSystem, systemPrompt),
 			llms.TextParts(llms.ChatMessageTypeHuman, userPrompt),
@@ -125,14 +129,14 @@ func cleanResponse(input string) string {
 	return strings.TrimSpace(cleaned)
 }
 
-func validateJSON(jsonStr string) error {
+func ValidateJSON(jsonStr string) error {
 	jsonBytes := []byte(jsonStr)
 	// Check if the JSON format is correct
 	if !json.Valid(jsonBytes) {
 		return fmt.Errorf("input is not valid JSON")
 	}
 	// Try to unmarshal the JSON into the struct
-	var resp HTTPResponse
+	var resp JSONResponse
 	if err := json.Unmarshal(jsonBytes, &resp); err != nil {
 		return fmt.Errorf("error unmarshalling JSON: %s", err)
 	}
