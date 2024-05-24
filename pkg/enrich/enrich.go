@@ -1,8 +1,7 @@
 package enrich
 
 import (
-	"errors"
-	"log"
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -25,8 +24,9 @@ type Default struct {
 	CacheTTL time.Duration
 }
 
+// ScannerSubnets contains a list of known scanners' subnet.
 // The list is taken from https://github.com/mushorg/glutton.
-var scannerSubnets = map[string][]string{
+var ScannerSubnets = map[string][]string{
 	"censys scanner": {
 		"162.142.125.0/24",
 		"167.94.138.0/24",
@@ -60,33 +60,24 @@ func New(conf *Config) *Default {
 }
 
 func (e *Default) Process(ip string) (*LookupInfo, error) {
-	// Check the cache
-	val, err := e.Cache.Get(ip)
-	if err != nil {
-		if errors.Is(err, gcache.KeyNotFoundError) {
-			// log.Printf("Enrichment cache miss for IP %q: %s", ip, err)
-		} else {
-			log.Printf("Failed to retrieve %q from cache: %s", ip, err)
-		}
-	}
+	val, _ := e.Cache.Get(ip)
 	if l, ok := val.(LookupInfo); ok && l != (LookupInfo{}) {
 		return &l, nil
 	}
 
-	hosts, err := reverseIPLookup(ip)
+	hosts, err := ReverseIPLookup(ip)
 	if err != nil {
-		return (&LookupInfo{}), err
+		return nil, err
 	}
 	host := hosts[0]
 
-	scanner, err := isKnownScanner(ip, hosts)
+	scanner, err := IsKnownScanner(ip, hosts)
 	if err != nil {
-		log.Println(err)
+		return nil, err
 	}
 
-	// Update the cache
 	if err := e.Cache.SetWithExpire(ip, LookupInfo{Host: host, KnownScanner: scanner}, e.CacheTTL); err != nil {
-		log.Printf("Failed to update cache for IP %q: %s", ip, err)
+		return nil, fmt.Errorf("error updating enrichment cache for IP %q: %s", ip, err)
 	}
 
 	return &LookupInfo{
@@ -95,7 +86,7 @@ func (e *Default) Process(ip string) (*LookupInfo, error) {
 	}, nil
 }
 
-func reverseIPLookup(ip string) ([]string, error) {
+func ReverseIPLookup(ip string) ([]string, error) {
 	names, err := net.LookupAddr(ip)
 	if err != nil {
 		return nil, err
@@ -104,10 +95,10 @@ func reverseIPLookup(ip string) ([]string, error) {
 }
 
 // IsKnownScanner checks if the given IP belongs to a known scanner.
-func isKnownScanner(ip string, hosts []string) (string, error) {
+func IsKnownScanner(ip string, hosts []string) (string, error) {
 	parsedIP := net.ParseIP(ip)
 
-	for scanner, subnets := range scannerSubnets {
+	for scanner, subnets := range ScannerSubnets {
 		for _, subnet := range subnets {
 			_, net, err := net.ParseCIDR(subnet)
 			if err != nil {
