@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/0x4d31/galah/internal/config"
 	"github.com/go-playground/validator"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -29,11 +30,9 @@ type JSONResponse struct {
 }
 
 var supportsSystemPrompt = map[string]bool{
-	"openai": true,
+	"openai":    true,
+	"anthropic": true,
 }
-
-const systemPrompt = `Return JSON output and format your output as follows: ` +
-	`{"Headers": {"headerName1": "headerValue1", "headerName2": "headerValue2"}, "Body": "httpBody"}`
 
 // New initializes the LLM client based on the configured provider and model name.
 func New(ctx context.Context, config Config) (llms.Model, error) {
@@ -79,12 +78,14 @@ func GenerateLLMResponse(ctx context.Context, model llms.Model, temperature floa
 	return resp, nil
 }
 
-func CreateMessageContent(r *http.Request, promptTmpl string, provider string) ([]llms.MessageContent, error) {
+func CreateMessageContent(r *http.Request, cfg config.Config, provider string) ([]llms.MessageContent, error) {
 	httpReq, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		return nil, err
 	}
-	userPrompt := fmt.Sprintf(promptTmpl, httpReq)
+
+	userPrompt := fmt.Sprintf(cfg.UserPrompt, strings.TrimSpace(string(httpReq)))
+	systemPrompt := cfg.SystemPrompt
 
 	if supportsSystemPrompt[provider] {
 		return []llms.MessageContent{
@@ -93,15 +94,14 @@ func CreateMessageContent(r *http.Request, promptTmpl string, provider string) (
 		}, nil
 	}
 
-	userPrompt += "\n" + systemPrompt
 	return []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeHuman, userPrompt),
+		llms.TextParts(llms.ChatMessageTypeHuman, systemPrompt+"\n"+userPrompt),
 	}, nil
 }
 
 func cleanResponse(input string) string {
 	// Remove markdown code block backticks and json specifier.
-	re := regexp.MustCompile("^```(?:json)?|```$")
+	re := regexp.MustCompile("^```(?:json)?|```")
 	cleaned := re.ReplaceAllString(input, "")
 
 	return strings.TrimSpace(cleaned)

@@ -155,7 +155,7 @@ func (s *Server) extractPort(serverAddr string) string {
 }
 
 func (s *Server) generateResponse(r *http.Request, port string) ([]byte, error) {
-	messages, err := llm.CreateMessageContent(r, s.Config.PromptTemplate, s.LLMConfig.Provider)
+	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
 	if err != nil {
 		s.Logger.Errorf("error creating llm message: %s", err)
 		return nil, err
