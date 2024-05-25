@@ -45,6 +45,8 @@ func New(ctx context.Context, config Config) (llms.Model, error) {
 		return initVertexClient(ctx, config)
 	case "anthropic":
 		return initAnthropicClient(config)
+	case "cohere":
+		return initCohereClient(config)
 	default:
 		return nil, errors.New("unsupported llm provider")
 	}
