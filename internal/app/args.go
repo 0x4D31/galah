@@ -8,7 +8,8 @@ var args struct {
 	LLMCloudLocation string  `arg:"--cloud-location,env:LLM_CLOUD_LOCATION" help:"LLM cloud location region (required for GCP's Vertex AI)"`
 	LLMCloudProject  string  `arg:"--cloud-project,env:LLM_CLOUD_PROJECT" help:"LLM cloud project ID (required for GCP's Vertex AI)"`
 	ConfigFile       string  `arg:"-c,--config-file" help:"Path to config file" default:"config/config.yaml"`
-	DatabaseFile     string  `arg:"-d,--database-file" help:"Path to database file for response caching" default:"cache.db"`
 	EventLogFile     string  `arg:"-o,--event-log-file" help:"Path to event log file" default:"event_log.json"`
+	CacheDBFile      string  `arg:"-f,--cache-db-file" help:"Path to database file for response caching" default:"cache.db"`
+	CacheDuration    int     `arg:"-d,--cache-duration" help:"Cache duration for generated responses (in hours). Use 0 to disable caching, and -1 for unlimited caching (no expiration)." default:"24"`
 	LogLevel         string  `arg:"-l,--log-level" help:"Log level (debug, info, error, fatal)" default:"info"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -39,13 +40,14 @@ var ignoreHeaders = map[string]bool{
 }
 
 type Server struct {
-	Cache       *sql.DB
-	Config      config.Config
-	EventLogger *logger.Logger
-	LLMConfig   llm.Config
-	Logger      *logrus.Logger
-	Model       llms.Model
-	Servers     map[uint16]*http.Server
+	Cache         *sql.DB
+	CacheDuration int
+	Config        config.Config
+	EventLogger   *logger.Logger
+	LLMConfig     llm.Config
+	Logger        *logrus.Logger
+	Model         llms.Model
+	Servers       map[uint16]*http.Server
 }
 
 func (s *Server) StartServers() error {
@@ -121,9 +123,13 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 	port := s.extractPort(serverAddr)
 	s.Logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
 
-	response, err := cache.CheckCache(s.Cache, r, port, s.Config.CacheDuration)
+	response, err := cache.CheckCache(s.Cache, r, port, s.CacheDuration)
 	if err != nil {
-		s.Logger.Infof("request cache miss for %q: %s", r.URL.String(), err)
+		if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
+			s.Logger.Infof("Cache check for %q: %s", r.URL.String(), err)
+		} else {
+			s.Logger.Error(err)
+		}
 	}
 
 	if response == nil {
@@ -167,13 +173,16 @@ func (s *Server) generateResponse(r *http.Request, port string) ([]byte, error) 
 		s.EventLogger.LogError(r, responseString, port, err)
 		return nil, err
 	}
+	response := []byte(responseString)
 
 	s.Logger.Infof("generated HTTP response: %s", strings.ReplaceAll(responseString, "\n", " "))
 
-	response := []byte(responseString)
-	key := cache.GetCacheKey(r, port)
-	if err := cache.StoreResponse(s.Cache, key, response); err != nil {
-		s.Logger.Errorf("error storing response in cache: %s", err)
+	// Store the response if caching is enabled
+	if s.CacheDuration != 0 {
+		key := cache.GetCacheKey(r, port)
+		if err := cache.StoreResponse(s.Cache, key, response); err != nil {
+			s.Logger.Errorf("error storing response in cache: %s", err)
+		}
 	}
 
 	return response, nil

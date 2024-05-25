@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
-var mutex sync.Mutex
+var (
+	ErrCacheMiss    = errors.New("not found in cache")
+	ErrCacheExpired = errors.New("cached record is expired")
+	mutex           sync.Mutex
+)
 
 func InitializeCache(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path)
@@ -34,23 +36,31 @@ func InitializeCache(path string) (*sql.DB, error) {
 }
 
 func CheckCache(client *sql.DB, r *http.Request, port string, cacheDuration int) ([]byte, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	// Check if caching is disabled
+	if cacheDuration == 0 {
+		return nil, nil
+	}
 
 	cacheKey := GetCacheKey(r, port)
+
 	var response []byte
 	var cachedAt time.Time
-
-	// Order by cachedAt DESC to get the most recent record.
 	row := client.QueryRow("SELECT cachedAt, response FROM cache WHERE key = ? ORDER BY cachedAt DESC LIMIT 1", cacheKey)
-
 	err := row.Scan(&cachedAt, &response)
 	if err == sql.ErrNoRows {
-		return nil, errors.New("not found in cache")
+		return nil, ErrCacheMiss
+	} else if err != nil {
+		return nil, err
 	}
-	// TODO: Add an option to disable caching or set an indefinite caching (no expiration).
+
+	// Check if unlimited caching is enabled (i.e., no expiration)
+	if cacheDuration == -1 {
+		return response, nil
+	}
+
+	// Check if the cached record has expired
 	if time.Since(cachedAt) > time.Duration(cacheDuration)*time.Hour {
-		return nil, errors.New("cached record is too old")
+		return nil, ErrCacheExpired
 	}
 
 	return response, err

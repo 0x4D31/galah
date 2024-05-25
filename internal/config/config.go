@@ -7,11 +7,10 @@ import (
 )
 
 type Config struct {
-	CacheDuration int                  `yaml:"cache_duration"`
-	Ports         []PortConfig         `yaml:"ports"`
-	UserPrompt    string               `yaml:"user_prompt"`
-	SystemPrompt  string               `yaml:"system_prompt"`
-	TLS           map[string]TLSConfig `yaml:"tls"`
+	Ports        []PortConfig         `yaml:"ports"`
+	UserPrompt   string               `yaml:"user_prompt"`
+	SystemPrompt string               `yaml:"system_prompt"`
+	TLS          map[string]TLSConfig `yaml:"tls"`
 }
 
 type TLSConfig struct {

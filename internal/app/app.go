@@ -55,12 +55,13 @@ func (a *App) Run() error {
 	}
 
 	srv := server.Server{
-		Cache:       a.Cache,
-		Config:      a.Config,
-		EventLogger: a.EventLogger,
-		LLMConfig:   a.LLMConfig,
-		Logger:      a.Logger,
-		Model:       a.Model,
+		Cache:         a.Cache,
+		CacheDuration: args.CacheDuration,
+		Config:        a.Config,
+		EventLogger:   a.EventLogger,
+		LLMConfig:     a.LLMConfig,
+		Logger:        a.Logger,
+		Model:         a.Model,
 	}
 
 	srv.ListenForShutdownSignals()
@@ -92,7 +93,7 @@ func (a *App) init() error {
 		return fmt.Errorf("error initializing the LLM client: %s", err)
 	}
 
-	cache, err := cache.InitializeCache(args.DatabaseFile)
+	cache, err := cache.InitializeCache(args.CacheDBFile)
 	if err != nil {
 		return fmt.Errorf("error initializing the cache database: %s", err)
 	}
