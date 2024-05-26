@@ -34,7 +34,7 @@ type App struct {
 var logger *logrus.Logger
 
 const (
-	version   = "0.9"
+	version   = "1.0"
 	cacheSize = 1_000_000
 	lookupTTL = 1 * time.Hour
 	// sessionTTL = 2 * time.Minute

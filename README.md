@@ -32,7 +32,7 @@ The prompt configuration is key in this honeypot. While you can update the promp
 ██   ███ ███████ ██      ███████ ███████ 
 ██    ██ ██   ██ ██      ██   ██ ██   ██ 
  ██████  ██   ██ ███████ ██   ██ ██   ██ 
-  llm-based web honeypot // version 0.9
+  llm-based web honeypot // version 1.0
         author: Adel "0x4D31" Karimi
 
 Usage: galah --provider PROVIDER --model MODEL [--server-url SERVER-URL] [--temperature TEMPERATURE] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] [--interface INTERFACE] [--config-file CONFIG-FILE] [--event-log-file EVENT-LOG-FILE] [--cache-db-file CACHE-DB-FILE] [--cache-duration CACHE-DURATION] [--log-level LOG-LEVEL]
