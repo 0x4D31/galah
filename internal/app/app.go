@@ -22,7 +22,7 @@ import (
 type App struct {
 	Cache       *sql.DB
 	Config      *config.Config
-	EnrichCache *enrich.Default
+	EnrichCache *enrich.Enricher
 	EventLogger *el.Logger
 	Hostname    string
 	LLMConfig   llm.Config
@@ -102,7 +102,7 @@ func (a *App) init() error {
 		return fmt.Errorf("error initializing the cache database: %s", err)
 	}
 
-	enrichCache := enrich.New(&enrich.Config{
+	enrichCache := enrich.New(enrich.Config{
 		CacheSize: cacheSize,
 		CacheTTL:  lookupTTL,
 	})

@@ -21,10 +21,10 @@ type Config struct {
 	CacheTTL  time.Duration
 }
 
-// Default represents the default enrichment implementation.
-type Default struct {
-	Cache    gcache.Cache
-	CacheTTL time.Duration
+// Enricher represents the default enrichment implementation.
+type Enricher struct {
+	cache gcache.Cache
+	ttl   time.Duration
 }
 
 // ScannerSubnets contains a list of known scanners' subnet.
@@ -55,44 +55,48 @@ var ScannerSubnets = map[string][]string{
 	},
 }
 
-// New creates a new Default enrichment instance with the specified configuration.
-func New(conf *Config) *Default {
-	return &Default{
-		Cache:    gcache.New(conf.CacheSize).LFU().Build(),
-		CacheTTL: conf.CacheTTL,
+// New creates a new Enricher instance with the specified configuration.
+func New(conf Config) *Enricher {
+	return &Enricher{
+		cache: gcache.New(conf.CacheSize).LFU().Build(),
+		ttl:   conf.CacheTTL,
 	}
 }
 
 // Process enriches the IP address and stores the result in the enrichment cache.
-func (e *Default) Process(ip string) (*LookupInfo, error) {
-	val, _ := e.Cache.Get(ip)
-	if l, ok := val.(LookupInfo); ok && l != (LookupInfo{}) {
-		return &l, nil
+func (e *Enricher) Process(ip string) (*LookupInfo, error) {
+	val, err := e.cache.Get(ip)
+	if err == nil {
+		if lookupInfo, ok := val.(LookupInfo); ok {
+			return &lookupInfo, nil
+		}
 	}
 
-	hosts, err := ReverseIPLookup(ip)
-	if err != nil {
-		return nil, err
-	}
-	host := hosts[0]
-
-	scanner, err := IsKnownScanner(ip, hosts)
+	hosts, err := reverseIPLookup(ip)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := e.Cache.SetWithExpire(ip, LookupInfo{Host: host, KnownScanner: scanner}, e.CacheTTL); err != nil {
-		return nil, fmt.Errorf("error updating enrichment cache for IP %q: %s", ip, err)
+	host := ""
+	if len(hosts) > 0 {
+		host = hosts[0]
 	}
 
-	return &LookupInfo{
-		Host:         host,
-		KnownScanner: scanner,
-	}, nil
+	scanner, err := isKnownScanner(ip, hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	lookupInfo := LookupInfo{Host: host, KnownScanner: scanner}
+	if err := e.cache.SetWithExpire(ip, lookupInfo, e.ttl); err != nil {
+		return nil, fmt.Errorf("error updating enrichment cache for IP %q: %w", ip, err)
+	}
+
+	return &lookupInfo, nil
 }
 
-// ReverseIPLookup performs a reverse IP lookup and returns the names.
-func ReverseIPLookup(ip string) ([]string, error) {
+// reverseIPLookup performs a reverse IP lookup and returns the names.
+func reverseIPLookup(ip string) ([]string, error) {
 	names, err := net.LookupAddr(ip)
 	if err != nil {
 		return nil, err
@@ -100,33 +104,31 @@ func ReverseIPLookup(ip string) ([]string, error) {
 	return names, nil
 }
 
-// IsKnownScanner checks if the given IP belongs to a known scanner.
-func IsKnownScanner(ip string, hosts []string) (string, error) {
+// isKnownScanner checks if the given IP belongs to a known scanner.
+func isKnownScanner(ip string, hosts []string) (string, error) {
 	parsedIP := net.ParseIP(ip)
 
 	for scanner, subnets := range ScannerSubnets {
 		for _, subnet := range subnets {
-			_, net, err := net.ParseCIDR(subnet)
+			_, network, err := net.ParseCIDR(subnet)
 			if err != nil {
 				return "", err
 			}
-			if net.Contains(parsedIP) {
+			if network.Contains(parsedIP) {
 				return scanner, nil
 			}
 		}
 	}
 
 	for _, host := range hosts {
-		if strings.HasSuffix(host, "shodan.io.") {
+		switch {
+		case strings.HasSuffix(host, "shodan.io."):
 			return "shodan scanner", nil
-		}
-		if strings.HasSuffix(host, "censys-scanner.com.") {
-			return "shodan scanner", nil
-		}
-		if strings.HasSuffix(host, "binaryedge.ninja.") {
+		case strings.HasSuffix(host, "censys-scanner.com."):
+			return "censys scanner", nil
+		case strings.HasSuffix(host, "binaryedge.ninja."):
 			return "binaryedge scanner", nil
-		}
-		if strings.HasSuffix(host, "rwth-aachen.de.") {
+		case strings.HasSuffix(host, "rwth-aachen.de."):
 			return "rwth scanner", nil
 		}
 	}

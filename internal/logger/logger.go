@@ -25,7 +25,7 @@ const (
 )
 
 // New creates a new Logger instance with the specified configuration.
-func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Default, l *logrus.Logger) (*Logger, error) {
+func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, l *logrus.Logger) (*Logger, error) {
 	eventLogger := logrus.New()
 	eventLogger.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,

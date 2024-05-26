@@ -8,7 +8,7 @@ import (
 
 // Logger contains the components for logging.
 type Logger struct {
-	EnrichCache *enrich.Default
+	EnrichCache *enrich.Enricher
 	EventLogger *logrus.Logger
 	LLMConfig   llm.Config
 	Logger      *logrus.Logger
