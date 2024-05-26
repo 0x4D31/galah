@@ -40,6 +40,7 @@ var ignoreHeaders = map[string]bool{
 	"http/2.0": true,
 }
 
+// Server holds the configuration and components for running HTTP/TLS servers.
 type Server struct {
 	Cache         *sql.DB
 	CacheDuration int
@@ -52,6 +53,7 @@ type Server struct {
 	Servers       map[uint16]*http.Server
 }
 
+// StartServers starts all servers defined in the configuration.
 func (s *Server) StartServers() error {
 	var g errgroup.Group
 	mu := sync.Mutex{}
@@ -90,6 +92,7 @@ func (s *Server) startServer(pc config.PortConfig, mu *sync.Mutex) error {
 	return nil
 }
 
+// SetupServer configures the server with the provided settings.
 func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
 	var ip string
 	var err error
@@ -112,6 +115,7 @@ func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
 	}
 }
 
+// StartTLSServer starts the configured TLS server.
 func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error {
 	if pc.TLSProfile == "" {
 		return fmt.Errorf("TLS profile is not configured for port %d", pc.Port)
@@ -126,6 +130,7 @@ func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error
 	return server.ListenAndServeTLS(tlsConfig.Certificate, tlsConfig.Key)
 }
 
+// StartHTTPServer starts the configured HTTP server.
 func (s *Server) StartHTTPServer(server *http.Server, pc config.PortConfig) error {
 	s.Logger.Infof("starting HTTP server on port %d", pc.Port)
 	return server.ListenAndServe()
@@ -216,6 +221,7 @@ func isExcludedHeader(headerKey string) bool {
 	return ignoreHeaders[strings.ToLower(headerKey)]
 }
 
+// ListenForShutdownSignals handles graceful shutdown on receiving signals.
 func (s *Server) ListenForShutdownSignals() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)

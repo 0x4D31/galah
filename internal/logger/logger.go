@@ -24,6 +24,7 @@ const (
 	errorContentGeneration   = "contentGenerationError"
 )
 
+// New creates a new Logger instance with the specified configuration.
 func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Default, l *logrus.Logger) (*Logger, error) {
 	eventLogger := logrus.New()
 	eventLogger.SetFormatter(&logrus.JSONFormatter{
@@ -43,6 +44,7 @@ func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Default, l 
 	}, nil
 }
 
+// LogError logs a failedResponse event.
 func (l *Logger) LogError(r *http.Request, resp, port string, err error) {
 	fields := l.commonFields(r, port)
 	fields["error"] = errorFields(err, resp)
@@ -50,6 +52,7 @@ func (l *Logger) LogError(r *http.Request, resp, port string, err error) {
 	l.EventLogger.WithFields(fields).Error("failedResponse: returned 500 internal server error")
 }
 
+// LogEvent logs a successfulResponse event.
 func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port string) {
 	fields := l.commonFields(r, port)
 	fields["httpResponse"] = resp

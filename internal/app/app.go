@@ -18,6 +18,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+// App contains the core components and dependencies of the application.
 type App struct {
 	Cache       *sql.DB
 	Config      *config.Config
@@ -39,6 +40,7 @@ const (
 	// sessionTTL = 2 * time.Minute
 )
 
+// Run starts the app with the provided configuration.
 func (a *App) Run() error {
 	printBanner()
 

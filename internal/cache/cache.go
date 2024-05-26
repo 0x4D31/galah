@@ -14,6 +14,7 @@ var (
 	mutex           sync.Mutex
 )
 
+// InitializeCache sets up the response cache with the given file path.
 func InitializeCache(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -35,6 +36,7 @@ func InitializeCache(path string) (*sql.DB, error) {
 	return db, nil
 }
 
+// CheckCache verifies if the given key exists in the cache.
 func CheckCache(client *sql.DB, r *http.Request, port string, cacheDuration int) ([]byte, error) {
 	// Check if caching is disabled
 	if cacheDuration == 0 {
@@ -66,10 +68,12 @@ func CheckCache(client *sql.DB, r *http.Request, port string, cacheDuration int)
 	return response, err
 }
 
+// GetCacheKey constructs a cache key based on the provided parameters.
 func GetCacheKey(r *http.Request, port string) string {
 	return port + "_" + r.URL.String()
 }
 
+// StoreResponse saves the response in the cache with the specified key.
 func StoreResponse(client *sql.DB, key string, resp []byte) error {
 	mutex.Lock()
 	defer mutex.Unlock()

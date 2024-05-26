@@ -9,16 +9,19 @@ import (
 	"github.com/bluele/gcache"
 )
 
+// LookupInfo contains the results of a performed lookup.
 type LookupInfo struct {
 	Host         string
 	KnownScanner string
 }
 
+// Config holds configuration settings for enrichment cache.
 type Config struct {
 	CacheSize int
 	CacheTTL  time.Duration
 }
 
+// Default represents the default enrichment implementation.
 type Default struct {
 	Cache    gcache.Cache
 	CacheTTL time.Duration
@@ -52,6 +55,7 @@ var ScannerSubnets = map[string][]string{
 	},
 }
 
+// New creates a new Default enrichment instance with the specified configuration.
 func New(conf *Config) *Default {
 	return &Default{
 		Cache:    gcache.New(conf.CacheSize).LFU().Build(),
@@ -59,6 +63,7 @@ func New(conf *Config) *Default {
 	}
 }
 
+// Process enriches the IP address and stores the result in the enrichment cache.
 func (e *Default) Process(ip string) (*LookupInfo, error) {
 	val, _ := e.Cache.Get(ip)
 	if l, ok := val.(LookupInfo); ok && l != (LookupInfo{}) {
@@ -86,6 +91,7 @@ func (e *Default) Process(ip string) (*LookupInfo, error) {
 	}, nil
 }
 
+// ReverseIPLookup performs a reverse IP lookup and returns the names.
 func ReverseIPLookup(ip string) ([]string, error) {
 	names, err := net.LookupAddr(ip)
 	if err != nil {

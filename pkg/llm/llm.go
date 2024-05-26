@@ -15,6 +15,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+// Config holds configuration settings for the LLM.
 type Config struct {
 	APIKey        string
 	CloudLocation string
@@ -25,6 +26,7 @@ type Config struct {
 	Temperature   float64
 }
 
+// JSONResponse defines the expected JSON response from the LLM.
 type JSONResponse struct {
 	Headers map[string]string `json:"headers" validate:"required"`
 	Body    string            `json:"body" validate:"required"`
@@ -37,7 +39,7 @@ var supportsSystemPrompt = map[string]bool{
 	"cohere":    true,
 }
 
-// New initializes the LLM client based on the configured provider and model name.
+// New initializes the LLM client based on the provided configuration.
 func New(ctx context.Context, config Config) (llms.Model, error) {
 	switch config.Provider {
 	case "openai":
@@ -57,6 +59,7 @@ func New(ctx context.Context, config Config) (llms.Model, error) {
 	}
 }
 
+// GenerateLLMResponse generates a response from the LLM using the input message.
 func GenerateLLMResponse(ctx context.Context, model llms.Model, temperature float64, messages []llms.MessageContent) (string, error) {
 	response, err := model.GenerateContent(
 		ctx,
@@ -85,6 +88,7 @@ func GenerateLLMResponse(ctx context.Context, model llms.Model, temperature floa
 	return resp, nil
 }
 
+// CreateMessageContent creates the message content to be processed by the LLM.
 func CreateMessageContent(r *http.Request, cfg *config.Config, provider string) ([]llms.MessageContent, error) {
 	httpReq, err := httputil.DumpRequest(r, true)
 	if err != nil {
@@ -114,6 +118,7 @@ func cleanResponse(input string) string {
 	return strings.TrimSpace(cleaned)
 }
 
+// ValidateJSON validates the JSON structure of the input.
 func ValidateJSON(jsonStr string) error {
 	jsonBytes := []byte(jsonStr)
 	// Check if the JSON format is correct

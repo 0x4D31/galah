@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Logger contains the components for logging.
 type Logger struct {
 	EnrichCache *enrich.Default
 	EventLogger *logrus.Logger
@@ -13,6 +14,7 @@ type Logger struct {
 	Logger      *logrus.Logger
 }
 
+// HTTPRequest contains information about the HTTP request.
 type HTTPRequest struct {
 	Body                string `json:"body"`
 	BodySha256          string `json:"bodySha256"`
@@ -25,6 +27,7 @@ type HTTPRequest struct {
 	UserAgent           string `json:"userAgent"`
 }
 
+// LLM contains information about the large language model.
 type LLM struct {
 	Model       string  `json:"model"`
 	Provider    string  `json:"provider"`
