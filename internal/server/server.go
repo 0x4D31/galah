@@ -42,7 +42,7 @@ var ignoreHeaders = map[string]bool{
 type Server struct {
 	Cache         *sql.DB
 	CacheDuration int
-	Config        config.Config
+	Config        *config.Config
 	EventLogger   *logger.Logger
 	LLMConfig     llm.Config
 	Logger        *logrus.Logger

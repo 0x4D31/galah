@@ -20,7 +20,7 @@ import (
 
 type App struct {
 	Cache       *sql.DB
-	Config      config.Config
+	Config      *config.Config
 	EnrichCache *enrich.Default
 	EventLogger *el.Logger
 	Hostname    string

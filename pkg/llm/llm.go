@@ -85,7 +85,7 @@ func GenerateLLMResponse(ctx context.Context, model llms.Model, temperature floa
 	return resp, nil
 }
 
-func CreateMessageContent(r *http.Request, cfg config.Config, provider string) ([]llms.MessageContent, error) {
+func CreateMessageContent(r *http.Request, cfg *config.Config, provider string) ([]llms.MessageContent, error) {
 	httpReq, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		return nil, err
