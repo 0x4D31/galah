@@ -32,13 +32,13 @@ ports:
     protocol: HTTP
   - port: 443
     protocol: TLS
-    tls_profile: profile1_selfsigned
+    tls_profile: tls_profile1
   - port: 8443
     protocol: TLS
-    tls_profile: profile1_selfsigned
+    tls_profile: tls_profile1
 
 # TLS Profiles
-tls:
-  profile1_selfsigned:
+profiles:
+  tls_profile1:
     certificate: "cert/cert.pem"
     key: "cert/key.pem"

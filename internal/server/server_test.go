@@ -135,7 +135,7 @@ func TestStartTLSServer(t *testing.T) {
 
 	a := &app.App{
 		Config: config.Config{
-			TLS: map[string]config.TLSConfig{
+			Profiles: map[string]config.TLSConfig{
 				"invalidTLSProfile": {
 					Certificate: "non-existent_cert.pem",
 					Key:         "non-existent_key.pem",

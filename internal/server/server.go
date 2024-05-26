@@ -105,7 +105,7 @@ func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error
 		return fmt.Errorf("TLS profile is not configured for port %d", pc.Port)
 	}
 
-	tlsConfig, ok := s.Config.TLS[pc.TLSProfile]
+	tlsConfig, ok := s.Config.Profiles[pc.TLSProfile]
 	if !ok || tlsConfig.Certificate == "" || tlsConfig.Key == "" {
 		return fmt.Errorf("TLS profile is incomplete for port %d", pc.Port)
 	}

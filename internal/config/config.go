@@ -7,10 +7,10 @@ import (
 )
 
 type Config struct {
-	Ports        []PortConfig         `yaml:"ports"`
-	UserPrompt   string               `yaml:"user_prompt"`
 	SystemPrompt string               `yaml:"system_prompt"`
-	TLS          map[string]TLSConfig `yaml:"tls"`
+	UserPrompt   string               `yaml:"user_prompt"`
+	Ports        []PortConfig         `yaml:"ports"`
+	Profiles     map[string]TLSConfig `yaml:"profiles"`
 }
 
 type TLSConfig struct {
