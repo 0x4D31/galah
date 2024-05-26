@@ -57,6 +57,7 @@ func (a *App) Run() error {
 	srv := server.Server{
 		Cache:         a.Cache,
 		CacheDuration: args.CacheDuration,
+		Interface:     args.Interface,
 		Config:        a.Config,
 		EventLogger:   a.EventLogger,
 		LLMConfig:     a.LLMConfig,

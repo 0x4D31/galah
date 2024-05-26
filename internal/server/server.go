@@ -19,6 +19,7 @@ import (
 	"github.com/0x4d31/galah/internal/config"
 	"github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/google/gopacket/pcap"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
@@ -42,6 +43,7 @@ var ignoreHeaders = map[string]bool{
 type Server struct {
 	Cache         *sql.DB
 	CacheDuration int
+	Interface     string
 	Config        *config.Config
 	EventLogger   *logger.Logger
 	LLMConfig     llm.Config
@@ -89,7 +91,17 @@ func (s *Server) startServer(pc config.PortConfig, mu *sync.Mutex) error {
 }
 
 func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
-	serverAddr := fmt.Sprintf(":%d", pc.Port)
+	var ip string
+	var err error
+
+	if s.Interface != "" {
+		ip, err = getInterfaceIP(s.Interface)
+		if err != nil {
+			s.Logger.Errorln(err)
+		}
+	}
+	serverAddr := net.JoinHostPort(ip, fmt.Sprintf("%d", pc.Port))
+
 	return &http.Server{
 		Addr: serverAddr,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -224,4 +236,25 @@ func (s *Server) ListenForShutdownSignals() {
 		s.Logger.Infoln("all servers shut down gracefully.")
 		os.Exit(0)
 	}()
+}
+
+// getInterfaceIP retrieves the IPv4 address of the specified network interface.
+func getInterfaceIP(ifaceName string) (string, error) {
+	ifs, err := pcap.FindAllDevs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, iface := range ifs {
+		if iface.Name == ifaceName {
+			for _, address := range iface.Addresses {
+				ip := address.IP
+				if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
+					return ip.String(), nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no non-loopback addresses found for interface: %s", ifaceName)
 }

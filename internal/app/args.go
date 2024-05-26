@@ -8,6 +8,7 @@ var args struct {
 	LLMAPIKey        string  `arg:"-k,--api-key,env:LLM_API_KEY" help:"LLM API Key"`
 	LLMCloudLocation string  `arg:"--cloud-location,env:LLM_CLOUD_LOCATION" help:"LLM cloud location region (required for GCP's Vertex AI)"`
 	LLMCloudProject  string  `arg:"--cloud-project,env:LLM_CLOUD_PROJECT" help:"LLM cloud project ID (required for GCP's Vertex AI)"`
+	Interface        string  `arg:"-i,--interface" help:"interface to serve on"`
 	ConfigFile       string  `arg:"-c,--config-file" help:"Path to config file" default:"config/config.yaml"`
 	EventLogFile     string  `arg:"-o,--event-log-file" help:"Path to event log file" default:"event_log.json"`
 	CacheDBFile      string  `arg:"-f,--cache-db-file" help:"Path to database file for response caching" default:"cache.db"`
