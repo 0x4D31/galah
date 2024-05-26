@@ -21,6 +21,7 @@ type Config struct {
 	CloudProject  string
 	Model         string
 	Provider      string
+	ServerURL     string
 	Temperature   float64
 }
 
@@ -32,6 +33,8 @@ type JSONResponse struct {
 var supportsSystemPrompt = map[string]bool{
 	"openai":    true,
 	"anthropic": true,
+	"ollama":    true,
+	"cohere":    true,
 }
 
 // New initializes the LLM client based on the configured provider and model name.
@@ -47,6 +50,8 @@ func New(ctx context.Context, config Config) (llms.Model, error) {
 		return initAnthropicClient(config)
 	case "cohere":
 		return initCohereClient(config)
+	case "ollama":
+		return initOllamaClient(config)
 	default:
 		return nil, errors.New("unsupported llm provider")
 	}

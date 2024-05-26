@@ -83,6 +83,7 @@ func (a *App) init() error {
 	modelConfig := llm.Config{
 		Provider:      args.LLMProvider,
 		Model:         args.LLMModel,
+		ServerURL:     args.LLMServerURL,
 		Temperature:   args.LLMTemperature,
 		APIKey:        args.LLMAPIKey,
 		CloudProject:  args.LLMCloudProject,

@@ -1,8 +1,9 @@
 package app
 
 var args struct {
-	LLMProvider      string  `arg:"-p,--provider,env:LLM_PROVIDER,required" help:"LLM provider (openai, googleai, gcp-vertex, anthropic, cohere)"`
+	LLMProvider      string  `arg:"-p,--provider,env:LLM_PROVIDER,required" help:"LLM provider (openai, googleai, gcp-vertex, anthropic, cohere, ollama)"`
 	LLMModel         string  `arg:"-m,--model,env:LLM_MODEL,required" help:"LLM model (e.g. gpt-3.5-turbo-1106, gemini-1.5-pro-preview-0409)"`
+	LLMServerURL     string  `arg:"-u,--server-url,env:LLM_SERVER_URL" help:"LLM Server URL (required for Ollama)"`
 	LLMTemperature   float64 `arg:"-t,--temperature,env:LLM_TEMPERATURE" help:"LLM sampling temperature (0-2). Higher values make the output more random" default:"1"`
 	LLMAPIKey        string  `arg:"-k,--api-key,env:LLM_API_KEY" help:"LLM API Key"`
 	LLMCloudLocation string  `arg:"--cloud-location,env:LLM_CLOUD_LOCATION" help:"LLM cloud location region (required for GCP's Vertex AI)"`

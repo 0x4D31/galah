@@ -39,7 +39,7 @@ Usage: galah --provider PROVIDER --model MODEL [--temperature TEMPERATURE] [--ap
 
 Options:
   --provider PROVIDER, -p PROVIDER
-                         LLM provider (openai, googleai, gcp-vertex, anthropic, cohere) [env: LLM_PROVIDER]
+                         LLM provider (openai, googleai, gcp-vertex, anthropic, cohere, ollama) [env: LLM_PROVIDER]
   --model MODEL, -m MODEL
                          LLM model (e.g. gpt-3.5-turbo-1106, gemini-1.5-pro-preview-0409) [env: LLM_MODEL]
   --temperature TEMPERATURE, -t TEMPERATURE
