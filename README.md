@@ -35,13 +35,15 @@ The prompt configuration is key in this honeypot. While you can update the promp
   llm-based web honeypot // version 0.9
         author: Adel "0x4D31" Karimi
 
-Usage: galah --provider PROVIDER --model MODEL [--temperature TEMPERATURE] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] [--config-file CONFIG-FILE] [--event-log-file EVENT-LOG-FILE] [--cache-db-file CACHE-DB-FILE] [--cache-duration CACHE-DURATION] [--log-level LOG-LEVEL]
+Usage: galah --provider PROVIDER --model MODEL [--server-url SERVER-URL] [--temperature TEMPERATURE] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] [--interface INTERFACE] [--config-file CONFIG-FILE] [--event-log-file EVENT-LOG-FILE] [--cache-db-file CACHE-DB-FILE] [--cache-duration CACHE-DURATION] [--log-level LOG-LEVEL]
 
 Options:
   --provider PROVIDER, -p PROVIDER
                          LLM provider (openai, googleai, gcp-vertex, anthropic, cohere, ollama) [env: LLM_PROVIDER]
   --model MODEL, -m MODEL
                          LLM model (e.g. gpt-3.5-turbo-1106, gemini-1.5-pro-preview-0409) [env: LLM_MODEL]
+  --server-url SERVER-URL, -u SERVER-URL
+                         LLM Server URL (required for Ollama) [env: LLM_SERVER_URL]
   --temperature TEMPERATURE, -t TEMPERATURE
                          LLM sampling temperature (0-2). Higher values make the output more random [default: 1, env: LLM_TEMPERATURE]
   --api-key API-KEY, -k API-KEY
@@ -50,6 +52,8 @@ Options:
                          LLM cloud location region (required for GCP's Vertex AI) [env: LLM_CLOUD_LOCATION]
   --cloud-project CLOUD-PROJECT
                          LLM cloud project ID (required for GCP's Vertex AI) [env: LLM_CLOUD_PROJECT]
+  --interface INTERFACE, -i INTERFACE
+                         interface to serve on
   --config-file CONFIG-FILE, -c CONFIG-FILE
                          Path to config file [default: config/config.yaml]
   --event-log-file EVENT-LOG-FILE, -o EVENT-LOG-FILE
