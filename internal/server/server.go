@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/0x4d31/galah/internal/config"
 	"github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/google/gopacket/pcap"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
@@ -38,16 +40,20 @@ var ignoreHeaders = map[string]bool{
 	"http/2.0": true,
 }
 
+// Server holds the configuration and components for running HTTP/TLS servers.
 type Server struct {
-	Cache       *sql.DB
-	Config      config.Config
-	EventLogger *logger.Logger
-	LLMConfig   llm.Config
-	Logger      *logrus.Logger
-	Model       llms.Model
-	Servers     map[uint16]*http.Server
+	Cache         *sql.DB
+	CacheDuration int
+	Interface     string
+	Config        *config.Config
+	EventLogger   *logger.Logger
+	LLMConfig     llm.Config
+	Logger        *logrus.Logger
+	Model         llms.Model
+	Servers       map[uint16]*http.Server
 }
 
+// StartServers starts all servers defined in the configuration.
 func (s *Server) StartServers() error {
 	var g errgroup.Group
 	mu := sync.Mutex{}
@@ -86,8 +92,19 @@ func (s *Server) startServer(pc config.PortConfig, mu *sync.Mutex) error {
 	return nil
 }
 
+// SetupServer configures the server with the provided settings.
 func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
-	serverAddr := fmt.Sprintf(":%d", pc.Port)
+	var ip string
+	var err error
+
+	if s.Interface != "" {
+		ip, err = getInterfaceIP(s.Interface)
+		if err != nil {
+			s.Logger.Errorln(err)
+		}
+	}
+	serverAddr := net.JoinHostPort(ip, fmt.Sprintf("%d", pc.Port))
+
 	return &http.Server{
 		Addr: serverAddr,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,12 +115,13 @@ func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
 	}
 }
 
+// StartTLSServer starts the configured TLS server.
 func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error {
 	if pc.TLSProfile == "" {
 		return fmt.Errorf("TLS profile is not configured for port %d", pc.Port)
 	}
 
-	tlsConfig, ok := s.Config.TLS[pc.TLSProfile]
+	tlsConfig, ok := s.Config.Profiles[pc.TLSProfile]
 	if !ok || tlsConfig.Certificate == "" || tlsConfig.Key == "" {
 		return fmt.Errorf("TLS profile is incomplete for port %d", pc.Port)
 	}
@@ -112,6 +130,7 @@ func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error
 	return server.ListenAndServeTLS(tlsConfig.Certificate, tlsConfig.Key)
 }
 
+// StartHTTPServer starts the configured HTTP server.
 func (s *Server) StartHTTPServer(server *http.Server, pc config.PortConfig) error {
 	s.Logger.Infof("starting HTTP server on port %d", pc.Port)
 	return server.ListenAndServe()
@@ -121,9 +140,13 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 	port := s.extractPort(serverAddr)
 	s.Logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
 
-	response, err := cache.CheckCache(s.Cache, r, port, s.Config.CacheDuration)
+	response, err := cache.CheckCache(s.Cache, r, port, s.CacheDuration)
 	if err != nil {
-		s.Logger.Infof("request cache miss for %q: %s", r.URL.String(), err)
+		if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
+			s.Logger.Infof("Cache check for %q: %s", r.URL.String(), err)
+		} else {
+			s.Logger.Error(err)
+		}
 	}
 
 	if response == nil {
@@ -155,7 +178,7 @@ func (s *Server) extractPort(serverAddr string) string {
 }
 
 func (s *Server) generateResponse(r *http.Request, port string) ([]byte, error) {
-	messages, err := llm.CreateMessageContent(r, s.Config.PromptTemplate, s.LLMConfig.Provider)
+	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
 	if err != nil {
 		s.Logger.Errorf("error creating llm message: %s", err)
 		return nil, err
@@ -167,13 +190,16 @@ func (s *Server) generateResponse(r *http.Request, port string) ([]byte, error) 
 		s.EventLogger.LogError(r, responseString, port, err)
 		return nil, err
 	}
+	response := []byte(responseString)
 
 	s.Logger.Infof("generated HTTP response: %s", strings.ReplaceAll(responseString, "\n", " "))
 
-	response := []byte(responseString)
-	key := cache.GetCacheKey(r, port)
-	if err := cache.StoreResponse(s.Cache, key, response); err != nil {
-		s.Logger.Errorf("error storing response in cache: %s", err)
+	// Store the response if caching is enabled
+	if s.CacheDuration != 0 {
+		key := cache.GetCacheKey(r, port)
+		if err := cache.StoreResponse(s.Cache, key, response); err != nil {
+			s.Logger.Errorf("error storing response in cache: %s", err)
+		}
 	}
 
 	return response, nil
@@ -195,6 +221,7 @@ func isExcludedHeader(headerKey string) bool {
 	return ignoreHeaders[strings.ToLower(headerKey)]
 }
 
+// ListenForShutdownSignals handles graceful shutdown on receiving signals.
 func (s *Server) ListenForShutdownSignals() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
@@ -215,4 +242,25 @@ func (s *Server) ListenForShutdownSignals() {
 		s.Logger.Infoln("all servers shut down gracefully.")
 		os.Exit(0)
 	}()
+}
+
+// getInterfaceIP retrieves the IPv4 address of the specified network interface.
+func getInterfaceIP(ifaceName string) (string, error) {
+	ifs, err := pcap.FindAllDevs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, iface := range ifs {
+		if iface.Name == ifaceName {
+			for _, address := range iface.Addresses {
+				ip := address.IP
+				if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
+					return ip.String(), nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no non-loopback addresses found for interface: %s", ifaceName)
 }

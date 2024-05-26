@@ -30,7 +30,7 @@ func TestStartServers(t *testing.T) {
 	}
 
 	a := &app.App{
-		Config: config.Config{},
+		Config: &config.Config{},
 		Logger: logrus.New(),
 	}
 
@@ -72,7 +72,7 @@ func TestStartHTTPServer(t *testing.T) {
 	}
 
 	a := &app.App{
-		Config: config.Config{},
+		Config: &config.Config{},
 		Logger: logrus.New(),
 	}
 
@@ -134,8 +134,8 @@ func TestStartTLSServer(t *testing.T) {
 	}
 
 	a := &app.App{
-		Config: config.Config{
-			TLS: map[string]config.TLSConfig{
+		Config: &config.Config{
+			Profiles: map[string]config.TLSConfig{
 				"invalidTLSProfile": {
 					Certificate: "non-existent_cert.pem",
 					Key:         "non-existent_key.pem",

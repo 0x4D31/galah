@@ -18,10 +18,11 @@ import (
 	"github.com/tmc/langchaingo/llms"
 )
 
+// App contains the core components and dependencies of the application.
 type App struct {
 	Cache       *sql.DB
-	Config      config.Config
-	EnrichCache *enrich.Default
+	Config      *config.Config
+	EnrichCache *enrich.Enricher
 	EventLogger *el.Logger
 	Hostname    string
 	LLMConfig   llm.Config
@@ -33,12 +34,13 @@ type App struct {
 var logger *logrus.Logger
 
 const (
-	version   = "0.9"
+	version   = "1.0"
 	cacheSize = 1_000_000
 	lookupTTL = 1 * time.Hour
 	// sessionTTL = 2 * time.Minute
 )
 
+// Run starts the app with the provided configuration.
 func (a *App) Run() error {
 	printBanner()
 
@@ -55,12 +57,14 @@ func (a *App) Run() error {
 	}
 
 	srv := server.Server{
-		Cache:       a.Cache,
-		Config:      a.Config,
-		EventLogger: a.EventLogger,
-		LLMConfig:   a.LLMConfig,
-		Logger:      a.Logger,
-		Model:       a.Model,
+		Cache:         a.Cache,
+		CacheDuration: args.CacheDuration,
+		Interface:     args.Interface,
+		Config:        a.Config,
+		EventLogger:   a.EventLogger,
+		LLMConfig:     a.LLMConfig,
+		Logger:        a.Logger,
+		Model:         a.Model,
 	}
 
 	srv.ListenForShutdownSignals()
@@ -82,6 +86,7 @@ func (a *App) init() error {
 	modelConfig := llm.Config{
 		Provider:      args.LLMProvider,
 		Model:         args.LLMModel,
+		ServerURL:     args.LLMServerURL,
 		Temperature:   args.LLMTemperature,
 		APIKey:        args.LLMAPIKey,
 		CloudProject:  args.LLMCloudProject,
@@ -92,12 +97,12 @@ func (a *App) init() error {
 		return fmt.Errorf("error initializing the LLM client: %s", err)
 	}
 
-	cache, err := cache.InitializeCache(args.DatabaseFile)
+	cache, err := cache.InitializeCache(args.CacheDBFile)
 	if err != nil {
 		return fmt.Errorf("error initializing the cache database: %s", err)
 	}
 
-	enrichCache := enrich.New(&enrich.Config{
+	enrichCache := enrich.New(enrich.Config{
 		CacheSize: cacheSize,
 		CacheTTL:  lookupTTL,
 	})

@@ -33,7 +33,7 @@ func TestIsKnownScanner(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scanner, err := IsKnownScanner(tt.ip, tt.host)
+			scanner, err := isKnownScanner(tt.ip, tt.host)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
