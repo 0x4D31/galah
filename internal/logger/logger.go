@@ -103,7 +103,7 @@ func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
 			ProtocolVersion:     r.Proto,
 			Request:             r.RequestURI,
 			UserAgent:           r.UserAgent(),
-			Headers:             headerValues(r.Header),
+			Headers:             convertMap(r.Header),
 			HeadersSorted:       strings.Join(headerKeys, ","),
 			HeadersSortedSha256: headersSortedSha256(headerKeys),
 			Body:                string(bodyBytes),
@@ -159,15 +159,17 @@ func headerKeys(headers http.Header) []string {
 	return keys
 }
 
-func headerValues(headers http.Header) string {
-	values := make([]string, 0, len(headers))
-	for key, value := range headers {
-		values = append(values, fmt.Sprintf("%s: %v", key, value))
-	}
-	return strings.Join(values, ", ")
-}
-
 func headersSortedSha256(headerKeys []string) string {
 	hash := sha256.Sum256([]byte(strings.Join(headerKeys, ",")))
 	return hex.EncodeToString(hash[:])
+}
+
+func convertMap(input map[string][]string) map[string]string {
+	result := make(map[string]string)
+
+	for key, values := range input {
+		result[key] = strings.Join(values, ", ")
+	}
+
+	return result
 }
