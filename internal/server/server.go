@@ -19,7 +19,6 @@ import (
 	"github.com/0x4d31/galah/internal/config"
 	"github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
-	"github.com/google/gopacket/pcap"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
@@ -246,18 +245,27 @@ func (s *Server) ListenForShutdownSignals() {
 
 // getInterfaceIP retrieves the IPv4 address of the specified network interface.
 func getInterfaceIP(ifaceName string) (string, error) {
-	ifs, err := pcap.FindAllDevs()
+	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
 		return "", err
 	}
 
-	for _, iface := range ifs {
-		if iface.Name == ifaceName {
-			for _, address := range iface.Addresses {
-				ip := address.IP
-				if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
-					return ip.String(), nil
-				}
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, address := range addrs {
+		switch v := address.(type) {
+		case *net.IPNet:
+			ip := v.IP
+			if ip.To4() != nil && !ip.IsLoopback() {
+				return ip.String(), nil
+			}
+		case *net.IPAddr:
+			ip := v.IP
+			if ip.To4() != nil && !ip.IsLoopback() {
+				return ip.String(), nil
 			}
 		}
 	}
