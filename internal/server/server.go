@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -18,6 +19,7 @@ import (
 	"github.com/0x4d31/galah/internal/cache"
 	"github.com/0x4d31/galah/internal/config"
 	"github.com/0x4d31/galah/internal/logger"
+	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
@@ -45,6 +47,8 @@ type Server struct {
 	CacheDuration int
 	Interface     string
 	Config        *config.Config
+	Rules         []config.Rule
+	EnrichCache   *enrich.Enricher
 	EventLogger   *logger.Logger
 	LLMConfig     llm.Config
 	Logger        *logrus.Logger
@@ -107,7 +111,7 @@ func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
 	return &http.Server{
 		Addr: serverAddr,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			s.handleRequest(w, r, serverAddr)
+			s.handleRequest(w, r, serverAddr, s.Rules)
 		}),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -135,37 +139,66 @@ func (s *Server) StartHTTPServer(server *http.Server, pc config.PortConfig) erro
 	return server.ListenAndServe()
 }
 
-func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAddr string) {
+func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAddr string, rules []config.Rule) {
+	var response []byte
+	var respSource string
+	var err error
+
 	port := s.extractPort(serverAddr)
 	s.Logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
 
-	response, err := cache.CheckCache(s.Cache, r, port, s.CacheDuration)
-	if err != nil {
-		if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
-			s.Logger.Infof("Cache check for %q: %s", r.URL.String(), err)
-		} else {
+	// Check for applicable rules before generating the response
+	for _, rule := range rules {
+		if matched, err := regexp.MatchString(rule.Condition.HTTPRequestRegex, r.RequestURI); matched {
+			if rule.Response.Type == "static" {
+				resp, err := os.ReadFile(rule.Response.Template)
+				if err != nil {
+					s.Logger.Error(err)
+				} else {
+					response = resp
+					respSource = "static"
+					break
+				}
+			}
+		} else if err != nil {
 			s.Logger.Error(err)
 		}
 	}
 
+	// Check if the response is already cached
+	if response == nil {
+		response, err = cache.CheckCache(s.Cache, r, port, s.CacheDuration)
+		if err != nil {
+			if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
+				s.Logger.Infof("cache check for %q: %s", r.URL.String(), err)
+			} else {
+				s.Logger.Error(err)
+			}
+		} else {
+			respSource = "cache"
+		}
+	}
+
+	// Generate response using the LLM
 	if response == nil {
 		response, err = s.generateResponse(r, port)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		respSource = "llm"
 	}
 
 	var respData llm.JSONResponse
 	if err := json.Unmarshal(response, &respData); err != nil {
-		s.Logger.Errorf("error unmarshalling the json-encoded data: %s", err)
+		s.Logger.Errorf("error unmarshalling the JSON-encoded data: %s", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	s.sendResponse(w, respData)
-	s.Logger.Infof("sent the generated response to %s", r.RemoteAddr)
-	s.EventLogger.LogEvent(r, respData, port)
+	s.Logger.Infof("sent the response to %s (source: %s)", r.RemoteAddr, respSource)
+	s.EventLogger.LogEvent(r, respData, port, respSource)
 }
 
 func (s *Server) extractPort(serverAddr string) string {
