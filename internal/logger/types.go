@@ -16,15 +16,15 @@ type Logger struct {
 
 // HTTPRequest contains information about the HTTP request.
 type HTTPRequest struct {
-	Body                string `json:"body"`
-	BodySha256          string `json:"bodySha256"`
-	Headers             string `json:"headers"`
-	HeadersSorted       string `json:"headersSorted"`
-	HeadersSortedSha256 string `json:"headersSortedSha256"`
-	Method              string `json:"method"`
-	ProtocolVersion     string `json:"protocolVersion"`
-	Request             string `json:"request"`
-	UserAgent           string `json:"userAgent"`
+	Body                string            `json:"body"`
+	BodySha256          string            `json:"bodySha256"`
+	Headers             map[string]string `json:"headers"`
+	HeadersSorted       string            `json:"headersSorted"`
+	HeadersSortedSha256 string            `json:"headersSortedSha256"`
+	Method              string            `json:"method"`
+	ProtocolVersion     string            `json:"protocolVersion"`
+	Request             string            `json:"request"`
+	UserAgent           string            `json:"userAgent"`
 }
 
 // LLM contains information about the large language model.
