@@ -3,6 +3,5 @@
 *.crt
 *.key
 *.pem
-*.json
 *.db
 /bin

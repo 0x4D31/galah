@@ -1,0 +1,8 @@
+{
+    "Headers": {
+        "Content-Type":"text/html; charset=UTF-8",
+        "Server":"cloudflare",
+        "X-Content-Type-Options": "nosniff"
+    },
+    "Body": "hey there! \\o/"
+}
