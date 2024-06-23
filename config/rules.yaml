@@ -1,0 +1,14 @@
+rules:
+  - name: "example default response"
+    condition:
+      http_request_regex: "^/$"
+    response:
+      type: "static"
+      template: "templates/default.json"
+
+  - name: "example JSON response"
+    condition:
+      http_request_regex: "json"
+    response:
+      type: "static"
+      template: "templates/example-json.json"

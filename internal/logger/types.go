@@ -27,9 +27,15 @@ type HTTPRequest struct {
 	UserAgent           string            `json:"userAgent"`
 }
 
-// LLM contains information about the large language model.
-type LLM struct {
-	Model       string  `json:"model"`
-	Provider    string  `json:"provider"`
-	Temperature float64 `json:"temperature"`
+// ResponseMetadata holds metadata about the generated response
+type ResponseMetadata struct {
+	GenerationSource string  `json:"generationSource"`
+	Info             LLMInfo `json:"info,omitempty"`
+}
+
+// LLMInfo holds information about the large language model
+type LLMInfo struct {
+	Model       string  `json:"model,omitempty"`
+	Provider    string  `json:"provider,omitempty"`
+	Temperature float64 `json:"temperature,omitempty"`
 }

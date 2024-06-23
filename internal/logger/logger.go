@@ -48,14 +48,34 @@ func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, l
 func (l *Logger) LogError(r *http.Request, resp, port string, err error) {
 	fields := l.commonFields(r, port)
 	fields["error"] = errorFields(err, resp)
+	fields["responseMetadata"] = ResponseMetadata{
+		Info: LLMInfo{
+			Provider:    l.LLMConfig.Provider,
+			Model:       l.LLMConfig.Model,
+			Temperature: l.LLMConfig.Temperature,
+		},
+	}
 
 	l.EventLogger.WithFields(fields).Error("failedResponse: returned 500 internal server error")
 }
 
 // LogEvent logs a successfulResponse event.
-func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port string) {
+func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSource string) {
 	fields := l.commonFields(r, port)
 	fields["httpResponse"] = resp
+
+	if respSource == "llm" {
+		fields["responseMetadata"] = ResponseMetadata{
+			GenerationSource: respSource,
+			Info: LLMInfo{
+				Provider:    l.LLMConfig.Provider,
+				Model:       l.LLMConfig.Model,
+				Temperature: l.LLMConfig.Temperature,
+			},
+		}
+	} else {
+		fields["responseMetadata"] = ResponseMetadata{GenerationSource: respSource}
+	}
 
 	l.EventLogger.WithFields(fields).Info("successfulResponse")
 }
@@ -111,11 +131,6 @@ func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
 				hash := sha256.Sum256(data)
 				return hex.EncodeToString(hash[:])
 			}(bodyBytes),
-		},
-		"llm": LLM{
-			Provider:    l.LLMConfig.Provider,
-			Model:       l.LLMConfig.Model,
-			Temperature: l.LLMConfig.Temperature,
 		},
 	}
 }

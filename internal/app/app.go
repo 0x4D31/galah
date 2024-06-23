@@ -22,6 +22,7 @@ import (
 type App struct {
 	Cache       *sql.DB
 	Config      *config.Config
+	Rules       []config.Rule
 	EnrichCache *enrich.Enricher
 	EventLogger *el.Logger
 	Hostname    string
@@ -34,9 +35,9 @@ type App struct {
 var logger *logrus.Logger
 
 const (
-	version   = "1.0"
-	cacheSize = 1_000_000
-	lookupTTL = 1 * time.Hour
+	version         = "1.0"
+	lookupCacheSize = 1_000_000
+	lookupTTL       = 1 * time.Hour
 	// sessionTTL = 2 * time.Minute
 )
 
@@ -61,6 +62,7 @@ func (a *App) Run() error {
 		CacheDuration: args.CacheDuration,
 		Interface:     args.Interface,
 		Config:        a.Config,
+		Rules:         a.Rules,
 		EventLogger:   a.EventLogger,
 		LLMConfig:     a.LLMConfig,
 		Logger:        a.Logger,
@@ -83,6 +85,11 @@ func (a *App) init() error {
 		return fmt.Errorf("error loading config: %s", err)
 	}
 
+	rulesConfig, err := config.LoadRules(args.RulesConfigFile)
+	if err != nil {
+		return fmt.Errorf("error loading rules config: %s", err)
+	}
+
 	modelConfig := llm.Config{
 		Provider:      args.LLMProvider,
 		Model:         args.LLMModel,
@@ -103,7 +110,7 @@ func (a *App) init() error {
 	}
 
 	enrichCache := enrich.New(enrich.Config{
-		CacheSize: cacheSize,
+		CacheSize: lookupCacheSize,
 		CacheTTL:  lookupTTL,
 	})
 
@@ -114,6 +121,7 @@ func (a *App) init() error {
 
 	a.Cache = cache
 	a.Config = cfg
+	a.Rules = rulesConfig.Rules
 	a.EnrichCache = enrichCache
 	a.EventLogger = eventLogger
 	a.LLMConfig = modelConfig
