@@ -1,8 +1,8 @@
 package logger
 
 import (
-	"encoding/base64"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/bluele/gcache"
@@ -46,8 +46,13 @@ func (s *Sessionizer) Process(ip string, t time.Time) (string, error) {
 	return sessionID, nil
 }
 
-// generateSessionID creates a unique session ID based on IP and time.
+// generateSessionID creates a unique session ID based on time and IP.
 func generateSessionID(ip string, t time.Time) string {
+	// Remove non-alphanumeric characters from the IP address
+	re := regexp.MustCompile("[^a-zA-Z0-9]+")
+	cleanIP := re.ReplaceAllString(ip, "")
+
 	timestamp := t.UnixNano()
-	return base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf("%s%d", ip, timestamp)))
+
+	return fmt.Sprintf("%d%s", timestamp, cleanIP)
 }
