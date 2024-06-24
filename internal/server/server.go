@@ -149,7 +149,10 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 
 	// Check for applicable rules before generating the response
 	for _, rule := range rules {
-		if matched, err := regexp.MatchString(rule.Condition.HTTPRequestRegex, r.RequestURI); matched {
+		if !rule.Enabled {
+			continue
+		}
+		if matched, err := regexp.MatchString(rule.HTTPRequestRegex, r.RequestURI); matched {
 			if rule.Response.Type == "static" {
 				resp, err := os.ReadFile(rule.Response.Template)
 				if err != nil {

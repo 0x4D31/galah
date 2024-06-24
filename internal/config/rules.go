@@ -7,13 +7,10 @@ import (
 )
 
 type Rule struct {
-	Name      string    `yaml:"name"`
-	Condition Condition `yaml:"condition"`
-	Response  Response  `yaml:"response"`
-}
-
-type Condition struct {
-	HTTPRequestRegex string `yaml:"http_request_regex"`
+	Name             string   `yaml:"name"`
+	Enabled          bool     `yaml:"enabled"`
+	HTTPRequestRegex string   `yaml:"http_request_regex"`
+	Response         Response `yaml:"response"`
 }
 
 type Response struct {
