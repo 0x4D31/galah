@@ -25,7 +25,7 @@ const (
 )
 
 // New creates a new Logger instance with the specified configuration.
-func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, l *logrus.Logger) (*Logger, error) {
+func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, sessionizer *Sessionizer, l *logrus.Logger) (*Logger, error) {
 	eventLogger := logrus.New()
 	eventLogger.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
@@ -38,6 +38,7 @@ func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, l
 
 	return &Logger{
 		EnrichCache: eCache,
+		Sessionizer: sessionizer,
 		EventLogger: eventLogger,
 		LLMConfig:   modelConfig,
 		Logger:      l,
@@ -81,6 +82,8 @@ func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSour
 }
 
 func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
+	now := time.Now()
+
 	srcIP, srcPort, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		srcIP = r.RemoteAddr
@@ -110,8 +113,13 @@ func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
 	sort.Strings(headerKeys)
 	bodyBytes, _ := io.ReadAll(r.Body)
 
+	sessionID, err := l.Sessionizer.Process(srcIP, now)
+	if err != nil {
+		l.Logger.Errorf("error generating session ID for %q: %s", srcIP, err)
+	}
+
 	return logrus.Fields{
-		"eventTime":  time.Now(),
+		"eventTime":  now,
 		"srcIP":      srcIP,
 		"srcHost":    host,
 		"srcPort":    srcPort,
@@ -119,6 +127,7 @@ func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
 		"sensorName": sensorName,
 		"port":       port,
 		"httpRequest": HTTPRequest{
+			SessionID:           sessionID,
 			Method:              r.Method,
 			ProtocolVersion:     r.Proto,
 			Request:             r.RequestURI,

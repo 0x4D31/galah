@@ -23,7 +23,6 @@ type App struct {
 	Cache       *sql.DB
 	Config      *config.Config
 	Rules       []config.Rule
-	EnrichCache *enrich.Enricher
 	EventLogger *el.Logger
 	Hostname    string
 	LLMConfig   llm.Config
@@ -35,10 +34,10 @@ type App struct {
 var logger *logrus.Logger
 
 const (
-	version         = "1.0"
-	lookupCacheSize = 1_000_000
-	lookupTTL       = 1 * time.Hour
-	// sessionTTL = 2 * time.Minute
+	version    = "1.0"
+	CacheSize  = 1_000_000
+	lookupTTL  = 1 * time.Hour
+	sessionTTL = 2 * time.Minute
 )
 
 // Run starts the app with the provided configuration.
@@ -110,11 +109,16 @@ func (a *App) init() error {
 	}
 
 	enrichCache := enrich.New(enrich.Config{
-		CacheSize: lookupCacheSize,
+		CacheSize: CacheSize,
 		CacheTTL:  lookupTTL,
 	})
 
-	eventLogger, err := el.New(args.EventLogFile, modelConfig, enrichCache, logger)
+	sessionizer := el.NewSessionizer(el.Config{
+		CacheSize: CacheSize,
+		CacheTTL:  sessionTTL,
+	})
+
+	eventLogger, err := el.New(args.EventLogFile, modelConfig, enrichCache, sessionizer, logger)
 	if err != nil {
 		return err
 	}
@@ -122,7 +126,6 @@ func (a *App) init() error {
 	a.Cache = cache
 	a.Config = cfg
 	a.Rules = rulesConfig.Rules
-	a.EnrichCache = enrichCache
 	a.EventLogger = eventLogger
 	a.LLMConfig = modelConfig
 	a.Logger = logger

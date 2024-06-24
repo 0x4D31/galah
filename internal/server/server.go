@@ -18,8 +18,7 @@ import (
 
 	"github.com/0x4d31/galah/internal/cache"
 	"github.com/0x4d31/galah/internal/config"
-	"github.com/0x4d31/galah/internal/logger"
-	"github.com/0x4d31/galah/pkg/enrich"
+	el "github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
@@ -48,8 +47,7 @@ type Server struct {
 	Interface     string
 	Config        *config.Config
 	Rules         []config.Rule
-	EnrichCache   *enrich.Enricher
-	EventLogger   *logger.Logger
+	EventLogger   *el.Logger
 	LLMConfig     llm.Config
 	Logger        *logrus.Logger
 	Model         llms.Model
