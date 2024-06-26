@@ -1,8 +1,9 @@
 package logger
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/bluele/gcache"
@@ -37,22 +38,24 @@ func (s *Sessionizer) Process(ip string, t time.Time) (string, error) {
 		}
 	}
 
-	sessionID := generateSessionID(ip, t)
+	sid := sessionID()
 
-	if err := s.cache.SetWithExpire(ip, sessionID, s.ttl); err != nil {
+	if err := s.cache.SetWithExpire(ip, sid, s.ttl); err != nil {
 		return "", fmt.Errorf("error updating session cache for IP %q: %w", ip, err)
 	}
 
-	return sessionID, nil
+	return sid, nil
 }
 
-// generateSessionID creates a unique session ID based on time and IP.
-func generateSessionID(ip string, t time.Time) string {
-	// Remove non-alphanumeric characters from the IP address
-	re := regexp.MustCompile("[^a-zA-Z0-9]+")
-	cleanIP := re.ReplaceAllString(ip, "")
+// sessionID creates a unique session ID.
+func sessionID() string {
+	timestamp := time.Now().UnixNano()
 
-	timestamp := t.UnixNano()
+	randBytes := make([]byte, 10)
+	if _, err := rand.Read(randBytes); err != nil {
+		return fmt.Sprintf("%d-fallback", timestamp)
+	}
+	randPart := base64.URLEncoding.EncodeToString(randBytes)
 
-	return fmt.Sprintf("%d%s", timestamp, cleanIP)
+	return fmt.Sprintf("%d-%s", timestamp, randPart)
 }
