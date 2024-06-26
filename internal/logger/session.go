@@ -53,9 +53,9 @@ func sessionID() string {
 
 	randBytes := make([]byte, 10)
 	if _, err := rand.Read(randBytes); err != nil {
-		return fmt.Sprintf("%d-fallback", timestamp)
+		return fmt.Sprintf("%d_fallback", timestamp)
 	}
 	randPart := base64.URLEncoding.EncodeToString(randBytes)
 
-	return fmt.Sprintf("%d-%s", timestamp, randPart)
+	return fmt.Sprintf("%d_%s", timestamp, randPart)
 }
