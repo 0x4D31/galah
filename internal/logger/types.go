@@ -9,6 +9,7 @@ import (
 // Logger contains the components for logging.
 type Logger struct {
 	EnrichCache *enrich.Enricher
+	Sessionizer *Sessionizer
 	EventLogger *logrus.Logger
 	LLMConfig   llm.Config
 	Logger      *logrus.Logger
@@ -24,6 +25,7 @@ type HTTPRequest struct {
 	Method              string            `json:"method"`
 	ProtocolVersion     string            `json:"protocolVersion"`
 	Request             string            `json:"request"`
+	SessionID           string            `json:"sessionID"`
 	UserAgent           string            `json:"userAgent"`
 }
 
