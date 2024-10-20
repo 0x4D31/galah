@@ -14,6 +14,7 @@ func initCohereClient(config Config) (llms.Model, error) {
 	opts := []cohere.Option{
 		cohere.WithModel(config.Model),
 		cohere.WithToken(config.APIKey),
+		cohere.WithBaseURL(config.ServerURL),
 	}
 	m, err := cohere.New(opts...)
 	if err != nil {

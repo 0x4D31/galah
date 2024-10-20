@@ -14,6 +14,7 @@ func initOpenAIClient(config Config) (llms.Model, error) {
 	opts := []openai.Option{
 		openai.WithModel(config.Model),
 		openai.WithToken(config.APIKey),
+		openai.WithBaseURL(config.ServerURL),
 	}
 	m, err := openai.New(opts...)
 	if err != nil {

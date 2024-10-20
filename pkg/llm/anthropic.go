@@ -14,6 +14,7 @@ func initAnthropicClient(config Config) (llms.Model, error) {
 	opts := []anthropic.Option{
 		anthropic.WithModel(config.Model),
 		anthropic.WithToken(config.APIKey),
+		anthropic.WithBaseURL(config.ServerURL),
 	}
 	m, err := anthropic.New(opts...)
 	if err != nil {
