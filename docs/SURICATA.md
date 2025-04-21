@@ -45,3 +45,6 @@ Modifiers such as `distance` and `within` are parsed but not currently enforced.
 All patterns specified for each buffer in a rule must match for the rule to be considered a hit (logical AND). Matching rules are logged to the console and included in the event JSON under the `suricataMatches` array, where each entry contains:
   - `sid`: Rule identifier.
   - `msg`: Rule message.
+
+#### Example
+![example](images/suricata-rule-matching.png)
