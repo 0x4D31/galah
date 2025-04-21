@@ -1,11 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -20,6 +22,7 @@ import (
 	"github.com/0x4d31/galah/internal/config"
 	el "github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/0x4d31/galah/pkg/suricata"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
@@ -40,6 +43,17 @@ var ignoreHeaders = map[string]bool{
 	"http/2.0": true,
 }
 
+// safeMatch wraps Suricata.Match to recover from any panics and return no matches on error.
+func safeMatch(rs *suricata.RuleSet, req *http.Request, body string) (out []suricata.Rule) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			// log the panic and continue
+			logrus.Errorf("panic in Suricata.Match: %v", rec)
+		}
+	}()
+	return rs.Match(req, body)
+}
+
 // Server holds the configuration and components for running HTTP/TLS servers.
 type Server struct {
 	Cache         *sql.DB
@@ -51,6 +65,7 @@ type Server struct {
 	LLMConfig     llm.Config
 	Logger        *logrus.Logger
 	Model         llms.Model
+	Suricata      *suricata.RuleSet
 	Servers       map[uint16]*http.Server
 }
 
@@ -142,6 +157,21 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 	var respSource string
 	var err error
 
+	// Read and capture request body for Suricata matching and LLM
+	var bodyBytes []byte
+	// Only read body if Suricata matching is enabled (to reduce overhead)
+	if s.Suricata != nil && r.Body != nil {
+		const maxBodySize = 1 << 20 // 1 MiB cap
+		limited := io.LimitReader(r.Body, maxBodySize)
+		bodyBytes, err = io.ReadAll(limited)
+		if err != nil {
+			s.Logger.Errorf("error reading request body: %s", err)
+		}
+		// Restore Body for downstream handlers (and LLM)
+		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	}
+	reqBodyStr := string(bodyBytes)
+
 	port := s.extractPort(serverAddr)
 	s.Logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
 
@@ -199,7 +229,20 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 
 	s.sendResponse(w, respData)
 	s.Logger.Infof("sent the response to %s (source: %s)", r.RemoteAddr, respSource)
-	s.EventLogger.LogEvent(r, respData, port, respSource)
+
+	// Asynchronously perform Suricata matching and event logging to avoid blocking the handler
+	if s.Suricata != nil {
+		go func(req *http.Request, body string, resp llm.JSONResponse, port, src string) {
+			matches := safeMatch(s.Suricata, req, body)
+			for _, m := range matches {
+				s.Logger.Infof("Suricata SID=%s – %q", m.SID, m.Msg)
+			}
+			s.EventLogger.LogEvent(req, resp, port, src, matches)
+		}(r, reqBodyStr, respData, port, respSource)
+	} else {
+		// No Suricata: just log the event immediately
+		s.EventLogger.LogEvent(r, respData, port, respSource, nil)
+	}
 }
 
 func (s *Server) extractPort(serverAddr string) string {
