@@ -14,6 +14,7 @@ import (
 
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/0x4d31/galah/pkg/suricata"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -60,8 +61,8 @@ func (l *Logger) LogError(r *http.Request, resp, port string, err error) {
 	l.EventLogger.WithFields(fields).Error("failedResponse: returned 500 internal server error")
 }
 
-// LogEvent logs a successfulResponse event.
-func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSource string) {
+// LogEvent logs a successfulResponse event, including any matched Suricata rules.
+func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSource string, suricataMatches []suricata.Rule) {
 	fields := l.commonFields(r, port)
 	fields["httpResponse"] = resp
 
@@ -76,6 +77,15 @@ func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSour
 		}
 	} else {
 		fields["responseMetadata"] = ResponseMetadata{GenerationSource: respSource}
+	}
+
+	// Include Suricata match info if available
+	if len(suricataMatches) > 0 {
+		var matches []map[string]string
+		for _, m := range suricataMatches {
+			matches = append(matches, map[string]string{"sid": m.SID, "msg": m.Msg})
+		}
+		fields["suricataMatches"] = matches
 	}
 
 	l.EventLogger.WithFields(fields).Info("successfulResponse")
