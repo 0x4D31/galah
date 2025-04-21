@@ -13,6 +13,7 @@ import (
 	"github.com/0x4d31/galah/internal/server"
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/0x4d31/galah/pkg/suricata"
 	"github.com/alexflint/go-arg"
 	"github.com/sirupsen/logrus"
 	"github.com/tmc/langchaingo/llms"
@@ -28,6 +29,7 @@ type App struct {
 	LLMConfig   llm.Config
 	Logger      *logrus.Logger
 	Model       llms.Model
+	Suricata    *suricata.RuleSet
 	Servers     map[uint16]*http.Server
 }
 
@@ -66,6 +68,7 @@ func (a *App) Run() error {
 		LLMConfig:     a.LLMConfig,
 		Logger:        a.Logger,
 		Model:         a.Model,
+		Suricata:      a.Suricata,
 	}
 
 	srv.ListenForShutdownSignals()
@@ -132,6 +135,19 @@ func (a *App) init() error {
 	a.Model = model
 	a.Servers = make(map[uint16]*http.Server)
 
+	// Optionally load Suricata HTTP rules
+	if args.SuricataEnabled {
+		if args.SuricataRulesDir == "" {
+			return fmt.Errorf("suricata enabled but no --suricata-rules-dir provided")
+		}
+		rs := suricata.NewRuleSet()
+		if err := rs.LoadRules(args.SuricataRulesDir); err != nil {
+			return fmt.Errorf("error loading Suricata rules from %s: %w", args.SuricataRulesDir, err)
+		}
+		a.Logger.Infof("loaded %d Suricata rules from %s", len(rs.Rules), args.SuricataRulesDir)
+		a.Suricata = rs
+	}
+
 	return nil
 }
 
@@ -156,5 +172,4 @@ func printBanner() {
 
 `
 	fmt.Printf(banner, version)
-	return
 }
