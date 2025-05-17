@@ -111,6 +111,56 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 	}, nil
 }
 
+// NewServiceFromConfig initializes a Service using the provided configuration
+// and rule set. The ConfigFile and RulesConfigFile values from opts are ignored.
+func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options) (*Service, error) {
+	logger := logrus.New()
+	if opts.LogLevel != "" {
+		if lvl, err := logrus.ParseLevel(opts.LogLevel); err == nil {
+			logger.SetLevel(lvl)
+		}
+	}
+
+	modelCfg := llm.Config{
+		Provider:      opts.LLMProvider,
+		Model:         opts.LLMModel,
+		ServerURL:     opts.LLMServerURL,
+		Temperature:   opts.LLMTemperature,
+		APIKey:        opts.LLMAPIKey,
+		CloudProject:  opts.LLMCloudProject,
+		CloudLocation: opts.LLMCloudLocation,
+	}
+
+	model, err := llm.New(ctx, modelCfg)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing the LLM client: %w", err)
+	}
+
+	cacheDB, err := cache.InitializeCache(opts.CacheDBFile)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing the cache database: %w", err)
+	}
+
+	enrichCache := enrich.New(enrich.Config{CacheSize: cacheSize, CacheTTL: lookupTTL})
+	sessionizer := el.NewSessionizer(el.Config{CacheSize: cacheSize, CacheTTL: sessionTTL})
+
+	eventLogger, err := el.New(opts.EventLogFile, modelCfg, enrichCache, sessionizer, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Service{
+		Cache:         cacheDB,
+		CacheDuration: opts.CacheDuration,
+		Config:        cfg,
+		Rules:         rules,
+		EventLogger:   eventLogger,
+		LLMConfig:     modelCfg,
+		Logger:        logger,
+		Model:         model,
+	}, nil
+}
+
 // GenerateHTTPResponse creates an HTTP response using the LLM.
 func (s *Service) GenerateHTTPResponse(r *http.Request, port string) ([]byte, error) {
 	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
