@@ -15,4 +15,6 @@ var args struct {
 	CacheDBFile      string  `arg:"-f,--cache-db-file" help:"Path to database file for response caching" default:"cache.db"`
 	CacheDuration    int     `arg:"-d,--cache-duration" help:"Cache duration for generated responses (in hours). Use 0 to disable caching, and -1 for unlimited caching (no expiration)." default:"24"`
 	LogLevel         string  `arg:"-l,--log-level" help:"Log level (debug, info, error, fatal)" default:"info"`
+	SuricataEnabled  bool    `arg:"--suricata-enabled" help:"Enable Suricata HTTP rule checking" default:"false"`
+	SuricataRulesDir string  `arg:"--suricata-rules-dir" help:"Directory containing Suricata .rules files to check HTTP requests against" default:""`
 }
