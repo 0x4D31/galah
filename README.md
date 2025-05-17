@@ -209,4 +209,19 @@ if err != nil {
 fmt.Println(string(respBytes))
 ```
 
+### Using `NewServiceFromConfig`
+
+If you already have a `config.Config` object and a slice of `config.Rule`, you
+can pass them directly when creating the service:
+
+```go
+cfg, _ := config.LoadConfig("config.yaml")
+rulesCfg, _ := config.LoadRules("rules.yaml")
+svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules, galah.Options{
+    LLMProvider: "openai",
+    LLMModel:    "gpt-4.1-mini",
+    LLMAPIKey:   "YOUR_KEY",
+})
+```
+
 
