@@ -209,4 +209,16 @@ if err != nil {
 fmt.Println(string(respBytes))
 ```
 
+You can also build a service from an already loaded configuration:
+
+```go
+cfg, _ := config.LoadConfig("config.yaml")
+rulesCfg, _ := config.LoadRules("rules.yaml")
+svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules, galah.Options{
+    LLMProvider: "openai",
+    LLMModel:    "gpt-4.1-mini",
+    LLMAPIKey:   "YOUR_KEY",
+})
+```
+
 
