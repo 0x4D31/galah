@@ -21,9 +21,19 @@ const (
 	cacheSize  = 1_000_000
 	lookupTTL  = 1 * time.Hour
 	sessionTTL = 2 * time.Minute
+
+	// Default file paths used when Options fields are left empty.
+	DefaultConfigFile      = "config/config.yaml"
+	DefaultRulesConfigFile = "config/rules.yaml"
+	DefaultCacheDBFile     = "cache.db"
+	DefaultEventLogFile    = "event_log.json"
 )
 
 // Options defines the configuration for creating a Service.
+//
+// If ConfigFile, RulesConfigFile, EventLogFile, or CacheDBFile are empty,
+// NewService falls back to DefaultConfigFile, DefaultRulesConfigFile,
+// DefaultEventLogFile, and DefaultCacheDBFile respectively.
 type Options struct {
 	LLMProvider      string
 	LLMModel         string
@@ -59,6 +69,19 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 		if lvl, err := logrus.ParseLevel(opts.LogLevel); err == nil {
 			logger.SetLevel(lvl)
 		}
+	}
+
+	if opts.ConfigFile == "" {
+		opts.ConfigFile = DefaultConfigFile
+	}
+	if opts.RulesConfigFile == "" {
+		opts.RulesConfigFile = DefaultRulesConfigFile
+	}
+	if opts.CacheDBFile == "" {
+		opts.CacheDBFile = DefaultCacheDBFile
+	}
+	if opts.EventLogFile == "" {
+		opts.EventLogFile = DefaultEventLogFile
 	}
 
 	cfg, err := config.LoadConfig(opts.ConfigFile)
