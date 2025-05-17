@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0x4d31/galah/galah"
 	"github.com/0x4d31/galah/internal/app"
 	"github.com/0x4d31/galah/internal/config"
 	"github.com/0x4d31/galah/internal/server"
@@ -45,6 +46,7 @@ func TestStartServers(t *testing.T) {
 				LLMConfig:   a.LLMConfig,
 				Logger:      a.Logger,
 				Model:       a.Model,
+				Service:     &galah.Service{},
 			}
 			err := srv.StartServers()
 
@@ -90,6 +92,7 @@ func TestStartHTTPServer(t *testing.T) {
 				LLMConfig:   a.LLMConfig,
 				Logger:      a.Logger,
 				Model:       a.Model,
+				Service:     &galah.Service{},
 			}
 			HTTPServer := srv.SetupServer(tt.portConfig)
 
@@ -154,6 +157,7 @@ func TestStartTLSServer(t *testing.T) {
 				LLMConfig:   a.LLMConfig,
 				Logger:      a.Logger,
 				Model:       a.Model,
+				Service:     &galah.Service{},
 			}
 			HTTPServer := srv.SetupServer(tt.portConfig)
 			err := srv.StartTLSServer(HTTPServer, tt.portConfig)
