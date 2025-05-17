@@ -1,8 +1,8 @@
 package suricata
 
 import (
-   "net/http/httptest"
-   "testing"
+	"net/http/httptest"
+	"testing"
 )
 
 func TestParseRule(t *testing.T) {
@@ -303,135 +303,137 @@ func TestExtractQuotedString(t *testing.T) {
 		})
 	}
 }
+
 // TestDecodeHexPattern verifies decoding of hex patterns enclosed in pipes.
 func TestDecodeHexPattern(t *testing.T) {
-   tests := []struct{
-       name    string
-       raw     string
-       want    string
-       wantErr bool
-   }{
-       {"No hex", "abc", "abc", false},
-       {"Simple hex", "|41|", "A", false},
-       {"Mixed", "foo|3b|bar", "foo;bar", false},
-       {"Multi-byte", "|41 42|", "AB", false},
-       {"Multi segments", "x|20|y|21|z", "x y!z", false},
-       {"Unterminated", "foo|41", "", true},
-       {"Invalid byte", "|zz|", "", true},
-   }
-   for _, tt := range tests {
-       got, err := decodeHexPattern(tt.raw)
-       if tt.wantErr {
-           if err == nil {
-               t.Errorf("%s: expected error, got none", tt.name)
-           }
-           continue
-       }
-       if err != nil {
-           t.Errorf("%s: unexpected error: %v", tt.name, err)
-           continue
-       }
-       if got != tt.want {
-           t.Errorf("%s: expected %q, got %q", tt.name, tt.want, got)
-       }
-   }
+	tests := []struct {
+		name    string
+		raw     string
+		want    string
+		wantErr bool
+	}{
+		{"No hex", "abc", "abc", false},
+		{"Simple hex", "|41|", "A", false},
+		{"Mixed", "foo|3b|bar", "foo;bar", false},
+		{"Multi-byte", "|41 42|", "AB", false},
+		{"Multi segments", "x|20|y|21|z", "x y!z", false},
+		{"Unterminated", "foo|41", "", true},
+		{"Invalid byte", "|zz|", "", true},
+	}
+	for _, tt := range tests {
+		got, err := decodeHexPattern(tt.raw)
+		if tt.wantErr {
+			if err == nil {
+				t.Errorf("%s: expected error, got none", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s: unexpected error: %v", tt.name, err)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("%s: expected %q, got %q", tt.name, tt.want, got)
+		}
+	}
 }
 
 // TestExtractPcre verifies parsing and compilation of PCRE patterns.
 func TestExtractPcre(t *testing.T) {
-   tests := []struct{
-       name    string
-       option  string
-       wantPat string
-       wantErr bool
-   }{
-       {"Valid simple", `pcre:"/foo/"`, "foo", false},
-       {"Valid flags", `pcre:"/Bar/i"`, "(?i)Bar", false},
-       {"Invalid prefix", `pcr:"/foo/"`, "", true},
-       {"Missing slashes", `pcre:"foo"`, "", true},
-       {"Bad regex", `pcre:"/(/"`, "", true},
-   }
-   for _, tt := range tests {
-       re, _, _, err := extractPcre(tt.option)
-       if tt.wantErr {
-           if err == nil {
-               t.Errorf("%s: expected error, got none", tt.name)
-           }
-           continue
-       }
-       if err != nil {
-           t.Errorf("%s: unexpected error: %v", tt.name, err)
-           continue
-       }
-       if re.String() != tt.wantPat {
-           t.Errorf("%s: expected pattern %q, got %q", tt.name, tt.wantPat, re.String())
-       }
-   }
+	tests := []struct {
+		name    string
+		option  string
+		wantPat string
+		wantErr bool
+	}{
+		{"Valid simple", `pcre:"/foo/"`, "foo", false},
+		{"Valid flags", `pcre:"/Bar/i"`, "(?i)Bar", false},
+		{"Invalid prefix", `pcr:"/foo/"`, "", true},
+		{"Missing slashes", `pcre:"foo"`, "", true},
+		{"Bad regex", `pcre:"/(/"`, "", true},
+	}
+	for _, tt := range tests {
+		re, _, _, err := extractPcre(tt.option)
+		if tt.wantErr {
+			if err == nil {
+				t.Errorf("%s: expected error, got none", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s: unexpected error: %v", tt.name, err)
+			continue
+		}
+		if re.String() != tt.wantPat {
+			t.Errorf("%s: expected pattern %q, got %q", tt.name, tt.wantPat, re.String())
+		}
+	}
 }
+
 // TestParseRuleHex ensures that parseRule decodes hex sequences in content patterns.
 func TestParseRuleHex(t *testing.T) {
-   ruleLine := `alert http $EXTERNAL_NET any -> $HOME_NET any (
+	ruleLine := `alert http $EXTERNAL_NET any -> $HOME_NET any (
        msg:"HexTest";
        flow:established,to_server;
        http.uri;
        content:"foo|3b|bar"; nocase;
        sid:1234;
    )`
-   rule, err := parseRule(ruleLine)
-   if err != nil {
-       t.Fatalf("Unexpected error: %v", err)
-   }
-   if rule.Msg != "HexTest" {
-       t.Errorf("Expected Msg 'HexTest', got '%s'", rule.Msg)
-   }
-   if rule.SID != "1234" {
-       t.Errorf("Expected SID '1234', got '%s'", rule.SID)
-   }
-   if len(rule.Contents) != 1 {
-       t.Fatalf("Expected 1 content match, got %d", len(rule.Contents))
-   }
-   cm := rule.Contents[0]
-   if cm.Pattern != "foo;bar" {
-       t.Errorf("Expected decoded pattern 'foo;bar', got '%s'", cm.Pattern)
-   }
-   if !cm.Modifiers.NoCase {
-       t.Errorf("Expected NoCase true, got false")
-   }
+	rule, err := parseRule(ruleLine)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if rule.Msg != "HexTest" {
+		t.Errorf("Expected Msg 'HexTest', got '%s'", rule.Msg)
+	}
+	if rule.SID != "1234" {
+		t.Errorf("Expected SID '1234', got '%s'", rule.SID)
+	}
+	if len(rule.Contents) != 1 {
+		t.Fatalf("Expected 1 content match, got %d", len(rule.Contents))
+	}
+	cm := rule.Contents[0]
+	if cm.Pattern != "foo;bar" {
+		t.Errorf("Expected decoded pattern 'foo;bar', got '%s'", cm.Pattern)
+	}
+	if !cm.Modifiers.NoCase {
+		t.Errorf("Expected NoCase true, got false")
+	}
 }
 
 // TestParseRulePcre ensures that parseRule extracts and compiles PCRE patterns.
 func TestParseRulePcre(t *testing.T) {
-   ruleLine := `alert http $EXTERNAL_NET any -> $HTTP_SERVERS any (
+	ruleLine := `alert http $EXTERNAL_NET any -> $HTTP_SERVERS any (
        msg:"PcreTest";
        flow:established,to_server;
        http.uri;
        pcre:"/abc[0-9]+/i";
        sid:5678;
    )`
-   rule, err := parseRule(ruleLine)
-   if err != nil {
-       t.Fatalf("Unexpected error: %v", err)
-   }
-   if rule.Msg != "PcreTest" {
-       t.Errorf("Expected Msg 'PcreTest', got '%s'", rule.Msg)
-   }
-   if rule.SID != "5678" {
-       t.Errorf("Expected SID '5678', got '%s'", rule.SID)
-   }
-   if len(rule.Pcre) != 1 {
-       t.Fatalf("Expected 1 PCRE match, got %d", len(rule.Pcre))
-   }
-   rm := rule.Pcre[0]
-   if rm.Buffer != "http.uri" {
-       t.Errorf("Expected PCRE Buffer 'http.uri', got '%s'", rm.Buffer)
-   }
-   if !rm.Regexp.MatchString("abc123") {
-       t.Errorf("Expected regex to match 'abc123'")
-   }
-   // Check that case-insensitive flag applied
-   if !rm.Regexp.MatchString("ABC123") {
-       t.Errorf("Expected regex to match 'ABC123' with ignore-case flag")
-   }
+	rule, err := parseRule(ruleLine)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if rule.Msg != "PcreTest" {
+		t.Errorf("Expected Msg 'PcreTest', got '%s'", rule.Msg)
+	}
+	if rule.SID != "5678" {
+		t.Errorf("Expected SID '5678', got '%s'", rule.SID)
+	}
+	if len(rule.Pcre) != 1 {
+		t.Fatalf("Expected 1 PCRE match, got %d", len(rule.Pcre))
+	}
+	rm := rule.Pcre[0]
+	if rm.Buffer != "http.uri" {
+		t.Errorf("Expected PCRE Buffer 'http.uri', got '%s'", rm.Buffer)
+	}
+	if !rm.Regexp.MatchString("abc123") {
+		t.Errorf("Expected regex to match 'abc123'")
+	}
+	// Check that case-insensitive flag applied
+	if !rm.Regexp.MatchString("ABC123") {
+		t.Errorf("Expected regex to match 'ABC123' with ignore-case flag")
+	}
 }
 
 func TestSplitOptions(t *testing.T) {
@@ -488,25 +490,25 @@ func TestSplitOptions(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
-   tests := []struct {
-       name         string
-       rules        []Rule
-       uri          string
-       expectedSIDs []string
-   }{
+	tests := []struct {
+		name         string
+		rules        []Rule
+		uri          string
+		expectedSIDs []string
+	}{
 		{
 			name: "Single Rule Match",
 			rules: []Rule{
 				{
 					Msg: "Test Rule",
 					SID: "1001",
-           Contents: []ContentMatch{
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "/test",
-                   Modifiers: ContentModifiers{NoCase: true},
-               },
-           },
+					Contents: []ContentMatch{
+						{
+							Buffer:    "http.uri",
+							Pattern:   "/test",
+							Modifiers: ContentModifiers{NoCase: true},
+						},
+					},
 				},
 			},
 			uri:          "/Test/Path",
@@ -518,13 +520,13 @@ func TestMatch(t *testing.T) {
 				{
 					Msg: "Test Rule",
 					SID: "1001",
-           Contents: []ContentMatch{
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "/test",
-                   Modifiers: ContentModifiers{NoCase: true},
-               },
-           },
+					Contents: []ContentMatch{
+						{
+							Buffer:    "http.uri",
+							Pattern:   "/test",
+							Modifiers: ContentModifiers{NoCase: true},
+						},
+					},
 				},
 			},
 			uri:          "/no/match/here",
@@ -536,29 +538,29 @@ func TestMatch(t *testing.T) {
 				{
 					Msg: "Rule One",
 					SID: "1001",
-           Contents: []ContentMatch{
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "/test",
-                   Modifiers: ContentModifiers{NoCase: true},
-               },
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "insert",
-                   Modifiers: ContentModifiers{NoCase: true},
-               },
-           },
+					Contents: []ContentMatch{
+						{
+							Buffer:    "http.uri",
+							Pattern:   "/test",
+							Modifiers: ContentModifiers{NoCase: true},
+						},
+						{
+							Buffer:    "http.uri",
+							Pattern:   "insert",
+							Modifiers: ContentModifiers{NoCase: true},
+						},
+					},
 				},
 				{
 					Msg: "Rule Two",
 					SID: "1002",
-           Contents: []ContentMatch{
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "/admin",
-                   Modifiers: ContentModifiers{NoCase: false},
-               },
-           },
+					Contents: []ContentMatch{
+						{
+							Buffer:    "http.uri",
+							Pattern:   "/admin",
+							Modifiers: ContentModifiers{NoCase: false},
+						},
+					},
 				},
 			},
 			uri:          "/Test/Insert/admin",
@@ -570,18 +572,18 @@ func TestMatch(t *testing.T) {
 				{
 					Msg: "Rule One",
 					SID: "1001",
-           Contents: []ContentMatch{
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "/test",
-                   Modifiers: ContentModifiers{NoCase: true},
-               },
-               {
-                   Buffer:    "http.uri",
-                   Pattern:   "insert",
-                   Modifiers: ContentModifiers{NoCase: true},
-               },
-           },
+					Contents: []ContentMatch{
+						{
+							Buffer:    "http.uri",
+							Pattern:   "/test",
+							Modifiers: ContentModifiers{NoCase: true},
+						},
+						{
+							Buffer:    "http.uri",
+							Pattern:   "insert",
+							Modifiers: ContentModifiers{NoCase: true},
+						},
+					},
 				},
 			},
 			uri:          "/test/path",
@@ -592,13 +594,13 @@ func TestMatch(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt // Capture range variable
 		t.Run(tt.name, func(t *testing.T) {
-           rs := NewRuleSet()
-           rs.Rules = append(rs.Rules, tt.rules...)
-           // build a dummy HTTP request for matching
-           req := httptest.NewRequest("GET", tt.uri, nil)
-           // ensure RequestURI is set
-           req.RequestURI = tt.uri
-           matches := rs.Match(req, "")
+			rs := NewRuleSet()
+			rs.Rules = append(rs.Rules, tt.rules...)
+			// build a dummy HTTP request for matching
+			req := httptest.NewRequest("GET", tt.uri, nil)
+			// ensure RequestURI is set
+			req.RequestURI = tt.uri
+			matches := rs.Match(req, "")
 			if len(matches) != len(tt.expectedSIDs) {
 				t.Fatalf("Expected %d matches, got %d", len(tt.expectedSIDs), len(matches))
 			}
