@@ -211,4 +211,13 @@ if err != nil {
 fmt.Println(string(respBytes))
 ```
 
+When `galah.NewService` is called with empty `ConfigFile`, `RulesConfigFile`,
+`CacheDBFile`, or `EventLogFile` fields, it automatically uses the same default
+paths as the CLI:
+
+- `config/config.yaml`
+- `config/rules.yaml`
+- `cache.db`
+- `event_log.json`
+
 
