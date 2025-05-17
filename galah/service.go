@@ -1,0 +1,140 @@
+package galah
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/0x4d31/galah/internal/cache"
+	"github.com/0x4d31/galah/internal/config"
+	el "github.com/0x4d31/galah/internal/logger"
+	"github.com/0x4d31/galah/pkg/enrich"
+	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/sirupsen/logrus"
+	"github.com/tmc/langchaingo/llms"
+)
+
+const (
+	cacheSize  = 1_000_000
+	lookupTTL  = 1 * time.Hour
+	sessionTTL = 2 * time.Minute
+)
+
+// Options defines the configuration for creating a Service.
+type Options struct {
+	LLMProvider      string
+	LLMModel         string
+	LLMServerURL     string
+	LLMTemperature   float64
+	LLMAPIKey        string
+	LLMCloudProject  string
+	LLMCloudLocation string
+	ConfigFile       string
+	RulesConfigFile  string
+	EventLogFile     string
+	CacheDBFile      string
+	CacheDuration    int
+	LogLevel         string
+}
+
+// Service encapsulates the components required to generate HTTP responses.
+type Service struct {
+	Cache         *sql.DB
+	CacheDuration int
+	Config        *config.Config
+	Rules         []config.Rule
+	EventLogger   *el.Logger
+	LLMConfig     llm.Config
+	Logger        *logrus.Logger
+	Model         llms.Model
+}
+
+// NewService loads configuration and initializes the components required for response generation.
+func NewService(ctx context.Context, opts Options) (*Service, error) {
+	logger := logrus.New()
+	if opts.LogLevel != "" {
+		if lvl, err := logrus.ParseLevel(opts.LogLevel); err == nil {
+			logger.SetLevel(lvl)
+		}
+	}
+
+	cfg, err := config.LoadConfig(opts.ConfigFile)
+	if err != nil {
+		return nil, fmt.Errorf("error loading config: %w", err)
+	}
+
+	rulesCfg, err := config.LoadRules(opts.RulesConfigFile)
+	if err != nil {
+		return nil, fmt.Errorf("error loading rules config: %w", err)
+	}
+
+	modelCfg := llm.Config{
+		Provider:      opts.LLMProvider,
+		Model:         opts.LLMModel,
+		ServerURL:     opts.LLMServerURL,
+		Temperature:   opts.LLMTemperature,
+		APIKey:        opts.LLMAPIKey,
+		CloudProject:  opts.LLMCloudProject,
+		CloudLocation: opts.LLMCloudLocation,
+	}
+
+	model, err := llm.New(ctx, modelCfg)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing the LLM client: %w", err)
+	}
+
+	cacheDB, err := cache.InitializeCache(opts.CacheDBFile)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing the cache database: %w", err)
+	}
+
+	enrichCache := enrich.New(enrich.Config{CacheSize: cacheSize, CacheTTL: lookupTTL})
+	sessionizer := el.NewSessionizer(el.Config{CacheSize: cacheSize, CacheTTL: sessionTTL})
+
+	eventLogger, err := el.New(opts.EventLogFile, modelCfg, enrichCache, sessionizer, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Service{
+		Cache:         cacheDB,
+		CacheDuration: opts.CacheDuration,
+		Config:        cfg,
+		Rules:         rulesCfg.Rules,
+		EventLogger:   eventLogger,
+		LLMConfig:     modelCfg,
+		Logger:        logger,
+		Model:         model,
+	}, nil
+}
+
+// GenerateHTTPResponse creates an HTTP response using the LLM.
+func (s *Service) GenerateHTTPResponse(r *http.Request, port string) ([]byte, error) {
+	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
+	if err != nil {
+		s.Logger.Errorf("error creating llm message: %s", err)
+		return nil, err
+	}
+
+	respStr, err := llm.GenerateLLMResponse(r.Context(), s.Model, s.LLMConfig.Temperature, messages)
+	if err != nil {
+		s.Logger.Errorf("error generating response: %s", err)
+		s.EventLogger.LogError(r, respStr, port, err)
+		return nil, err
+	}
+	resp := []byte(respStr)
+
+	s.Logger.Infof("generated HTTP response: %s", strings.ReplaceAll(respStr, "\n", " "))
+
+	if s.CacheDuration != 0 {
+		key := cache.GetCacheKey(r, port)
+		if err := cache.StoreResponse(s.Cache, key, resp); err != nil {
+			s.Logger.Errorf("error storing response in cache: %s", err)
+		}
+	}
+
+	return resp, nil
+}
