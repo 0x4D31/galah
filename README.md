@@ -188,3 +188,25 @@ JSON event log:
 ```
 
 See more examples [here](docs/EXAMPLES.md).
+## Library Usage
+
+The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response.
+
+```go
+svc, err := galah.NewService(context.Background(), galah.Options{
+    LLMProvider: "openai",
+    LLMModel:    "gpt-4.1-mini",
+    LLMAPIKey:   "YOUR_KEY",
+})
+if err != nil {
+    log.Fatal(err)
+}
+req, _ := http.NewRequest("GET", "https://example.com", nil)
+respBytes, err := svc.GenerateHTTPResponse(req, "8080")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(string(respBytes))
+```
+
+

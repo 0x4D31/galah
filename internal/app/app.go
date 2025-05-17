@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/0x4d31/galah/galah"
 	"github.com/0x4d31/galah/internal/cache"
 	"github.com/0x4d31/galah/internal/config"
 	el "github.com/0x4d31/galah/internal/logger"
@@ -29,6 +30,7 @@ type App struct {
 	LLMConfig   llm.Config
 	Logger      *logrus.Logger
 	Model       llms.Model
+	Service     *galah.Service
 	Suricata    *suricata.RuleSet
 	Servers     map[uint16]*http.Server
 }
@@ -58,6 +60,17 @@ func (a *App) Run() error {
 		logger.Fatalf("error initializing app: %s", err)
 	}
 
+	a.Service = &galah.Service{
+		Cache:         a.Cache,
+		CacheDuration: args.CacheDuration,
+		Config:        a.Config,
+		Rules:         a.Rules,
+		EventLogger:   a.EventLogger,
+		LLMConfig:     a.LLMConfig,
+		Logger:        a.Logger,
+		Model:         a.Model,
+	}
+
 	srv := server.Server{
 		Cache:         a.Cache,
 		CacheDuration: args.CacheDuration,
@@ -68,6 +81,7 @@ func (a *App) Run() error {
 		LLMConfig:     a.LLMConfig,
 		Logger:        a.Logger,
 		Model:         a.Model,
+		Service:       a.Service,
 		Suricata:      a.Suricata,
 	}
 
