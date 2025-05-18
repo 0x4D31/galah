@@ -188,6 +188,8 @@ JSON event log:
 ```
 
 See more examples [here](docs/EXAMPLES.md).
+
+
 ## Library Usage
 
 The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. When creating the service, be sure to provide the paths to the configuration files; omitting them will cause `NewService` to fail when loading the files.
@@ -211,13 +213,14 @@ if err != nil {
 fmt.Println(string(respBytes))
 ```
 
-When `galah.NewService` is called with empty `ConfigFile`, `RulesConfigFile`,
-`CacheDBFile`, or `EventLogFile` fields, it automatically uses the same default
-paths as the CLI:
+You can also build a service from an already loaded configuration:
 
-- `config/config.yaml`
-- `config/rules.yaml`
-- `cache.db`
-- `event_log.json`
-
-
+```go
+cfg, _ := config.LoadConfig("config.yaml")
+rulesCfg, _ := config.LoadRules("rules.yaml")
+svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules, galah.Options{
+    LLMProvider: "openai",
+    LLMModel:    "gpt-4.1-mini",
+    LLMAPIKey:   "YOUR_KEY",
+})
+```

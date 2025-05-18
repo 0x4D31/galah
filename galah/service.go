@@ -94,6 +94,23 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 		return nil, fmt.Errorf("error loading rules config: %w", err)
 	}
 
+	return createService(ctx, cfg, rulesCfg.Rules, opts, logger)
+}
+
+// NewServiceFromConfig initializes a Service using the provided configuration
+// and rule set. The ConfigFile and RulesConfigFile values from opts are ignored.
+func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options) (*Service, error) {
+	logger := logrus.New()
+	if opts.LogLevel != "" {
+		if lvl, err := logrus.ParseLevel(opts.LogLevel); err == nil {
+			logger.SetLevel(lvl)
+		}
+	}
+
+	return createService(ctx, cfg, rules, opts, logger)
+}
+
+func createService(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options, logger *logrus.Logger) (*Service, error) {
 	modelCfg := llm.Config{
 		Provider:      opts.LLMProvider,
 		Model:         opts.LLMModel,
@@ -126,7 +143,7 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 		Cache:         cacheDB,
 		CacheDuration: opts.CacheDuration,
 		Config:        cfg,
-		Rules:         rulesCfg.Rules,
+		Rules:         rules,
 		EventLogger:   eventLogger,
 		LLMConfig:     modelCfg,
 		Logger:        logger,
