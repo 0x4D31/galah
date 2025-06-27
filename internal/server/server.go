@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/0x4d31/galah/galah"
 	"github.com/0x4d31/galah/internal/cache"
 	"github.com/0x4d31/galah/internal/config"
 	el "github.com/0x4d31/galah/internal/logger"
@@ -56,6 +57,8 @@ func safeMatch(rs *suricata.RuleSet, req *http.Request, body string) (out []suri
 
 // Server holds the configuration and components for running HTTP/TLS servers.
 type Server struct {
+	// Service handles response generation and related components.
+	Service       *galah.Service
 	Cache         *sql.DB
 	CacheDuration int
 	Interface     string
@@ -210,9 +213,14 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 		}
 	}
 
-	// Generate response using the LLM
+	// Generate response using the service's LLM handler
 	if response == nil {
-		response, err = s.generateResponse(r, port)
+		if s.Service == nil {
+			s.Logger.Error("service is not configured")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		response, err = s.Service.GenerateHTTPResponse(r, port)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -251,34 +259,6 @@ func (s *Server) extractPort(serverAddr string) string {
 		port = ""
 	}
 	return port
-}
-
-func (s *Server) generateResponse(r *http.Request, port string) ([]byte, error) {
-	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
-	if err != nil {
-		s.Logger.Errorf("error creating llm message: %s", err)
-		return nil, err
-	}
-
-	responseString, err := llm.GenerateLLMResponse(r.Context(), s.Model, s.LLMConfig.Temperature, messages)
-	if err != nil {
-		s.Logger.Errorf("error generating response: %s", err)
-		s.EventLogger.LogError(r, responseString, port, err)
-		return nil, err
-	}
-	response := []byte(responseString)
-
-	s.Logger.Infof("generated HTTP response: %s", strings.ReplaceAll(responseString, "\n", " "))
-
-	// Store the response if caching is enabled
-	if s.CacheDuration != 0 {
-		key := cache.GetCacheKey(r, port)
-		if err := cache.StoreResponse(s.Cache, key, response); err != nil {
-			s.Logger.Errorf("error storing response in cache: %s", err)
-		}
-	}
-
-	return response, nil
 }
 
 func (s *Server) sendResponse(w http.ResponseWriter, response llm.JSONResponse) {
