@@ -63,15 +63,21 @@ func (a *App) Run() error {
 		logger.Fatalf("error initializing app: %s", err)
 	}
 
-	a.Service = &galah.Service{
-		Cache:         a.Cache,
-		CacheDuration: args.CacheDuration,
-		Config:        a.Config,
-		Rules:         a.Rules,
-		EventLogger:   a.EventLogger,
-		LLMConfig:     a.LLMConfig,
-		Logger:        a.Logger,
-		Model:         a.Model,
+	a.Service, err = galah.NewServiceFromConfig(context.Background(), a.Config, a.Rules, galah.Options{
+		LLMProvider:      a.LLMConfig.Provider,
+		LLMModel:         a.LLMConfig.Model,
+		LLMServerURL:     a.LLMConfig.ServerURL,
+		LLMTemperature:   a.LLMConfig.Temperature,
+		LLMAPIKey:        a.LLMConfig.APIKey,
+		LLMCloudProject:  a.LLMConfig.CloudProject,
+		LLMCloudLocation: a.LLMConfig.CloudLocation,
+		EventLogFile:     args.EventLogFile,
+		CacheDBFile:      args.CacheDBFile,
+		CacheDuration:    args.CacheDuration,
+		LogLevel:         args.LogLevel,
+	})
+	if err != nil {
+		logger.Fatalf("error creating service: %s", err)
 	}
 
 	srv := server.Server{
