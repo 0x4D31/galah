@@ -120,3 +120,32 @@ func TestGenerateHTTPResponseCaches(t *testing.T) {
 		t.Fatalf("cached response mismatch: got %s", cached)
 	}
 }
+
+func TestServiceClose(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpDB := filepath.Join(tmpDir, "cache.db")
+	tmpLog := filepath.Join(tmpDir, "eventlog.json")
+
+	svc, err := NewServiceFromConfig(context.Background(), &config.Config{}, nil, Options{
+		LLMProvider:  "openai",
+		LLMModel:     "gpt-3.5-turbo-1106",
+		LLMAPIKey:    "dummy",
+		CacheDBFile:  tmpDB,
+		EventLogFile: tmpLog,
+	})
+	if err != nil {
+		t.Fatalf("NewService error: %v", err)
+	}
+
+	if err := svc.Close(); err != nil {
+		t.Fatalf("Service.Close error: %v", err)
+	}
+
+	if err := svc.Cache.Ping(); err == nil {
+		t.Error("expected closed database error")
+	}
+
+	if _, err := svc.EventLogger.EventFile.Write([]byte("test")); err == nil {
+		t.Error("expected write to closed file to fail")
+	}
+}

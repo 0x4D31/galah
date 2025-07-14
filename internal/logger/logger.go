@@ -41,6 +41,7 @@ func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, s
 		EnrichCache: eCache,
 		Sessionizer: sessionizer,
 		EventLogger: eventLogger,
+		EventFile:   evFile,
 		LLMConfig:   modelConfig,
 		Logger:      l,
 	}, nil

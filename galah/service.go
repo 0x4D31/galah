@@ -3,6 +3,7 @@ package galah
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -177,4 +178,23 @@ func (s *Service) GenerateHTTPResponse(r *http.Request, port string) ([]byte, er
 	}
 
 	return resp, nil
+}
+
+// Close releases resources held by the Service.
+func (s *Service) Close() error {
+	var errs []error
+	if s.Cache != nil {
+		if err := s.Cache.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if s.EventLogger != nil && s.EventLogger.EventFile != nil {
+		if err := s.EventLogger.EventFile.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
 }
