@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/0x4d31/galah/galah"
@@ -86,6 +89,15 @@ func (a *App) Run() error {
 	}
 
 	srv.ListenForShutdownSignals()
+
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+		if err := a.Service.Close(); err != nil {
+			a.Logger.Errorf("error closing service: %s", err)
+		}
+	}()
 	if err := srv.StartServers(); err != nil {
 		logger.Fatalf("application failed to start: %s", err)
 	}
