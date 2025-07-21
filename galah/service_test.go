@@ -38,6 +38,30 @@ func TestNewServiceWithDefaults(t *testing.T) {
 	})
 }
 
+func TestNewServiceFromConfigWithDefaults(t *testing.T) {
+	wd, _ := os.Getwd()
+	os.Chdir("..")
+	t.Cleanup(func() { os.Chdir(wd) })
+
+	svc, err := NewServiceFromConfig(context.Background(), &config.Config{}, nil, Options{
+		LLMProvider: "openai",
+		LLMModel:    "gpt-3.5-turbo-1106",
+		LLMAPIKey:   "dummy",
+	})
+	if err != nil {
+		t.Fatalf("NewServiceFromConfig returned error: %v", err)
+	}
+	if svc == nil {
+		t.Fatal("NewServiceFromConfig returned nil service")
+	}
+
+	t.Cleanup(func() {
+		svc.Cache.Close()
+		os.Remove(DefaultCacheDBFile)
+		os.Remove(DefaultEventLogFile)
+	})
+}
+
 type MockModel struct {
 	GenerateContentFunc func(ctx context.Context, messages []llms.MessageContent, opts ...llms.CallOption) (*llms.ContentResponse, error)
 }

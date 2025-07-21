@@ -108,6 +108,19 @@ func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []confi
 		}
 	}
 
+	if opts.ConfigFile == "" {
+		opts.ConfigFile = DefaultConfigFile
+	}
+	if opts.RulesConfigFile == "" {
+		opts.RulesConfigFile = DefaultRulesConfigFile
+	}
+	if opts.CacheDBFile == "" {
+		opts.CacheDBFile = DefaultCacheDBFile
+	}
+	if opts.EventLogFile == "" {
+		opts.EventLogFile = DefaultEventLogFile
+	}
+
 	return createService(ctx, cfg, rules, opts, logger)
 }
 
