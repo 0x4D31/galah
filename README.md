@@ -203,8 +203,8 @@ svc, err := galah.NewService(context.Background(), galah.Options{
     LLMAPIKey:   "YOUR_KEY",
     ConfigFile:  "config/config.yaml",
     RulesConfigFile: "config/rules.yaml",
-    EventLogFile: "event_log.json", // use default if empty
-    CacheDBFile:  "cache.db",       // use default if empty
+    EventLogFile: "event_log.json",
+    CacheDBFile:  "cache.db",
 })
 if err != nil {
     log.Fatal(err)
@@ -231,4 +231,4 @@ svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules
 })
 ```
 
-Set `enabled: false` for any rule in `rules.yaml` that you want the service to ignore. Any unused option fields can be left empty to rely on their defaults.
+Any unused option fields can be left empty to rely on their defaults.
