@@ -58,6 +58,8 @@ Options:
                          interface to serve on
   --config-file CONFIG-FILE, -c CONFIG-FILE
                          Path to config file [default: config/config.yaml]
+  --rules-config-file RULES-CONFIG-FILE, -r RULES-CONFIG-FILE
+                         Path to rules config file [default: config/rules.yaml]
   --event-log-file EVENT-LOG-FILE, -o EVENT-LOG-FILE
                          Path to event log file [default: event_log.json]
   --cache-db-file CACHE-DB-FILE, -f CACHE-DB-FILE
@@ -192,7 +194,7 @@ See more examples [here](docs/EXAMPLES.md).
 
 ## Library Usage
 
-The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. When creating the service, be sure to provide the paths to the configuration files; omitting them will cause `NewService` to fail when loading the files.
+The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. When creating the service, you may omit `ConfigFile`, `RulesConfigFile`, `EventLogFile`, and `CacheDBFile` to use their default paths (`config/config.yaml`, `config/rules.yaml`, `event_log.json`, and `cache.db`).
 
 ```go
 svc, err := galah.NewService(context.Background(), galah.Options{
@@ -201,6 +203,8 @@ svc, err := galah.NewService(context.Background(), galah.Options{
     LLMAPIKey:   "YOUR_KEY",
     ConfigFile:  "config/config.yaml",
     RulesConfigFile: "config/rules.yaml",
+    EventLogFile: "event_log.json",
+    CacheDBFile:  "cache.db",
 })
 if err != nil {
     log.Fatal(err)
@@ -222,5 +226,9 @@ svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules
     LLMProvider: "openai",
     LLMModel:    "gpt-4.1-mini",
     LLMAPIKey:   "YOUR_KEY",
+    EventLogFile: "event_log.json", // use default if empty
+    CacheDBFile:  "cache.db",       // use default if empty
 })
 ```
+
+Any unused option fields can be left empty to rely on their defaults.
