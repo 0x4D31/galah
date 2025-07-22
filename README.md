@@ -22,12 +22,12 @@ The prompt configuration is key in this honeypot. While you can update the promp
 - Build and run the Go binary!
 
 ```bash
-% git clone git@github.com:0x4D31/galah.git
-% cd galah
-% go mod download
-% go build -o galah ./cmd/galah
-% export LLM_API_KEY=your-api-key
-% ./galah --help
+git clone git@github.com:0x4D31/galah.git
+cd galah
+go mod download
+mkdir bin
+go build -o bin/galah ./cmd/galah
+./bin/galah --help
 
  ██████   █████  ██       █████  ██   ██ 
 ██       ██   ██ ██      ██   ██ ██   ██ 
@@ -59,7 +59,7 @@ Options:
   --config-file CONFIG-FILE, -c CONFIG-FILE
                          Path to config file [default: config/config.yaml]
   --rules-config-file RULES-CONFIG-FILE, -r RULES-CONFIG-FILE
-                         Path to rules config file [default: config/rules.yaml]
+                         Path to rules config file (rule engine disabled if omitted)
   --event-log-file EVENT-LOG-FILE, -o EVENT-LOG-FILE
                          Path to event log file [default: event_log.json]
   --cache-db-file CACHE-DB-FILE, -f CACHE-DB-FILE
@@ -194,7 +194,7 @@ See more examples [here](docs/EXAMPLES.md).
 
 ## Library Usage
 
-The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. When creating the service, you may omit `ConfigFile`, `RulesConfigFile`, `EventLogFile`, and `CacheDBFile` to use their default paths (`config/config.yaml`, `config/rules.yaml`, `event_log.json`, and `cache.db`).
+The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. If `ConfigFile`, `EventLogFile`, or `CacheDBFile` are omitted, their default paths (`config/config.yaml`, `event_log.json`, and `cache.db`) are used. Specify `RulesConfigFile` to enable rule checking; leaving it empty disables the rule engine entirely.
 
 ```go
 svc, err := galah.NewService(context.Background(), galah.Options{
@@ -202,7 +202,7 @@ svc, err := galah.NewService(context.Background(), galah.Options{
     LLMModel:    "gpt-4.1-mini",
     LLMAPIKey:   "YOUR_KEY",
     ConfigFile:  "config/config.yaml",
-    RulesConfigFile: "config/rules.yaml",
+    RulesConfigFile: "config/rules.yaml", // omit to disable rule engine
     EventLogFile: "event_log.json",
     CacheDBFile:  "cache.db",
 })
@@ -231,4 +231,4 @@ svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules
 })
 ```
 
-Any unused option fields can be left empty to rely on their defaults.
+To turn off rule checking completely, omit `RulesConfigFile` when creating a service or pass `nil`/an empty slice to `NewServiceFromConfig`. Any unused option fields can be left empty to rely on their defaults.

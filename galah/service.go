@@ -24,17 +24,19 @@ const (
 	sessionTTL = 2 * time.Minute
 
 	// Default file paths used when Options fields are left empty.
+	// Leaving RulesConfigFile empty disables rule checking entirely.
 	DefaultConfigFile      = "config/config.yaml"
-	DefaultRulesConfigFile = "config/rules.yaml"
+	DefaultRulesConfigFile = ""
 	DefaultCacheDBFile     = "cache.db"
 	DefaultEventLogFile    = "event_log.json"
 )
 
 // Options defines the configuration for creating a Service.
 //
-// If ConfigFile, RulesConfigFile, EventLogFile, or CacheDBFile are empty,
-// NewService falls back to DefaultConfigFile, DefaultRulesConfigFile,
-// DefaultEventLogFile, and DefaultCacheDBFile respectively.
+// If ConfigFile, EventLogFile, or CacheDBFile are empty, NewService falls back
+// to DefaultConfigFile, DefaultEventLogFile, and DefaultCacheDBFile
+// respectively. Leaving RulesConfigFile empty disables the rule engine
+// entirely.
 type Options struct {
 	LLMProvider      string
 	LLMModel         string
@@ -75,9 +77,6 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 	if opts.ConfigFile == "" {
 		opts.ConfigFile = DefaultConfigFile
 	}
-	if opts.RulesConfigFile == "" {
-		opts.RulesConfigFile = DefaultRulesConfigFile
-	}
 	if opts.CacheDBFile == "" {
 		opts.CacheDBFile = DefaultCacheDBFile
 	}
@@ -90,12 +89,16 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 		return nil, fmt.Errorf("error loading config: %w", err)
 	}
 
-	rulesCfg, err := config.LoadRules(opts.RulesConfigFile)
-	if err != nil {
-		return nil, fmt.Errorf("error loading rules config: %w", err)
+	var rules []config.Rule
+	if opts.RulesConfigFile != "" {
+		rulesCfg, err := config.LoadRules(opts.RulesConfigFile)
+		if err != nil {
+			return nil, fmt.Errorf("error loading rules config: %w", err)
+		}
+		rules = rulesCfg.Rules
 	}
 
-	return createService(ctx, cfg, rulesCfg.Rules, opts, logger)
+	return createService(ctx, cfg, rules, opts, logger)
 }
 
 // NewServiceFromConfig initializes a Service using the provided configuration
@@ -110,9 +113,6 @@ func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []confi
 
 	if opts.ConfigFile == "" {
 		opts.ConfigFile = DefaultConfigFile
-	}
-	if opts.RulesConfigFile == "" {
-		opts.RulesConfigFile = DefaultRulesConfigFile
 	}
 	if opts.CacheDBFile == "" {
 		opts.CacheDBFile = DefaultCacheDBFile

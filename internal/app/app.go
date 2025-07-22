@@ -119,9 +119,13 @@ func (a *App) init() error {
 		return fmt.Errorf("error loading config: %s", err)
 	}
 
-	rulesConfig, err := config.LoadRules(args.RulesConfigFile)
-	if err != nil {
-		return fmt.Errorf("error loading rules config: %s", err)
+	var rules []config.Rule
+	if args.RulesConfigFile != "" {
+		rulesConfig, err := config.LoadRules(args.RulesConfigFile)
+		if err != nil {
+			return fmt.Errorf("error loading rules config: %s", err)
+		}
+		rules = rulesConfig.Rules
 	}
 
 	modelConfig := llm.Config{
@@ -160,7 +164,7 @@ func (a *App) init() error {
 
 	a.Cache = cache
 	a.Config = cfg
-	a.Rules = rulesConfig.Rules
+	a.Rules = rules
 	a.EventLogger = eventLogger
 	a.LLMConfig = modelConfig
 	a.Logger = logger
