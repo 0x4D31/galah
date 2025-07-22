@@ -145,13 +145,13 @@ func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error
 		return fmt.Errorf("TLS profile is incomplete for port %d", pc.Port)
 	}
 
-	s.Logger.Infof("starting HTTPS server on port %d with TLS profile: %s", pc.Port, pc.TLSProfile)
+	s.Logger.Infof("starting HTTPS server on %s with TLS profile: %s", server.Addr, pc.TLSProfile)
 	return server.ListenAndServeTLS(tlsConfig.Certificate, tlsConfig.Key)
 }
 
 // StartHTTPServer starts the configured HTTP server.
 func (s *Server) StartHTTPServer(server *http.Server, pc config.PortConfig) error {
-	s.Logger.Infof("starting HTTP server on port %d", pc.Port)
+	s.Logger.Infof("starting HTTP server on %s", server.Addr)
 	return server.ListenAndServe()
 }
 
