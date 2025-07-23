@@ -5,8 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/0x4d31/galah/galah"
 	"github.com/0x4d31/galah/internal/cache"
 	"github.com/0x4d31/galah/internal/config"
 	el "github.com/0x4d31/galah/internal/logger"
@@ -29,6 +33,7 @@ type App struct {
 	LLMConfig   llm.Config
 	Logger      *logrus.Logger
 	Model       llms.Model
+	Service     *galah.Service
 	Suricata    *suricata.RuleSet
 	Servers     map[uint16]*http.Server
 }
@@ -58,6 +63,23 @@ func (a *App) Run() error {
 		logger.Fatalf("error initializing app: %s", err)
 	}
 
+	a.Service, err = galah.NewServiceFromConfig(context.Background(), a.Config, a.Rules, galah.Options{
+		LLMProvider:      a.LLMConfig.Provider,
+		LLMModel:         a.LLMConfig.Model,
+		LLMServerURL:     a.LLMConfig.ServerURL,
+		LLMTemperature:   a.LLMConfig.Temperature,
+		LLMAPIKey:        a.LLMConfig.APIKey,
+		LLMCloudProject:  a.LLMConfig.CloudProject,
+		LLMCloudLocation: a.LLMConfig.CloudLocation,
+		EventLogFile:     args.EventLogFile,
+		CacheDBFile:      args.CacheDBFile,
+		CacheDuration:    args.CacheDuration,
+		LogLevel:         args.LogLevel,
+	})
+	if err != nil {
+		logger.Fatalf("error creating service: %s", err)
+	}
+
 	srv := server.Server{
 		Cache:         a.Cache,
 		CacheDuration: args.CacheDuration,
@@ -68,10 +90,20 @@ func (a *App) Run() error {
 		LLMConfig:     a.LLMConfig,
 		Logger:        a.Logger,
 		Model:         a.Model,
+		Service:       a.Service,
 		Suricata:      a.Suricata,
 	}
 
 	srv.ListenForShutdownSignals()
+
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+		if err := a.Service.Close(); err != nil {
+			a.Logger.Errorf("error closing service: %s", err)
+		}
+	}()
 	if err := srv.StartServers(); err != nil {
 		logger.Fatalf("application failed to start: %s", err)
 	}
@@ -87,9 +119,13 @@ func (a *App) init() error {
 		return fmt.Errorf("error loading config: %s", err)
 	}
 
-	rulesConfig, err := config.LoadRules(args.RulesConfigFile)
-	if err != nil {
-		return fmt.Errorf("error loading rules config: %s", err)
+	var rules []config.Rule
+	if args.RulesConfigFile != "" {
+		rulesConfig, err := config.LoadRules(args.RulesConfigFile)
+		if err != nil {
+			return fmt.Errorf("error loading rules config: %s", err)
+		}
+		rules = rulesConfig.Rules
 	}
 
 	modelConfig := llm.Config{
@@ -128,7 +164,7 @@ func (a *App) init() error {
 
 	a.Cache = cache
 	a.Config = cfg
-	a.Rules = rulesConfig.Rules
+	a.Rules = rules
 	a.EventLogger = eventLogger
 	a.LLMConfig = modelConfig
 	a.Logger = logger

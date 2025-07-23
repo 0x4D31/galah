@@ -10,7 +10,7 @@ var args struct {
 	LLMCloudProject  string  `arg:"--cloud-project,env:LLM_CLOUD_PROJECT" help:"LLM cloud project ID (required for GCP's Vertex AI)"`
 	Interface        string  `arg:"-i,--interface" help:"interface to serve on"`
 	ConfigFile       string  `arg:"-c,--config-file" help:"Path to config file" default:"config/config.yaml"`
-	RulesConfigFile  string  `arg:"-r,--rules-config-file" help:"Path to rules config file" default:"config/rules.yaml"`
+	RulesConfigFile  string  `arg:"-r,--rules-config-file" help:"Path to rules config file (disable rules if empty)" default:""`
 	EventLogFile     string  `arg:"-o,--event-log-file" help:"Path to event log file" default:"event_log.json"`
 	CacheDBFile      string  `arg:"-f,--cache-db-file" help:"Path to database file for response caching" default:"cache.db"`
 	CacheDuration    int     `arg:"-d,--cache-duration" help:"Cache duration for generated responses (in hours). Use 0 to disable caching, and -1 for unlimited caching (no expiration)." default:"24"`

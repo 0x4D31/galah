@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"os"
+
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
 	"github.com/sirupsen/logrus"
@@ -11,6 +13,7 @@ type Logger struct {
 	EnrichCache *enrich.Enricher
 	Sessionizer *Sessionizer
 	EventLogger *logrus.Logger
+	EventFile   *os.File
 	LLMConfig   llm.Config
 	Logger      *logrus.Logger
 }
