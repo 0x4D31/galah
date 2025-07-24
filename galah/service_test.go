@@ -5,10 +5,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0x4d31/galah/internal/cache"
 	"github.com/0x4d31/galah/internal/config"
+	"github.com/0x4d31/galah/pkg/llm"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -171,5 +173,69 @@ func TestServiceClose(t *testing.T) {
 
 	if _, err := svc.EventLogger.EventFile.Write([]byte("test")); err == nil {
 		t.Error("expected write to closed file to fail")
+	}
+}
+
+func TestServiceCheckCache(t *testing.T) {
+	cfg := &config.Config{}
+	tmpLog := filepath.Join(t.TempDir(), "eventlog.json")
+	svc, err := NewServiceFromConfig(context.Background(), cfg, nil, Options{
+		LLMProvider:   "openai",
+		LLMModel:      "gpt-3.5-turbo-1106",
+		LLMAPIKey:     "dummy",
+		EventLogFile:  tmpLog,
+		CacheDBFile:   ":memory:",
+		CacheDuration: 1,
+	})
+	if err != nil {
+		t.Fatalf("NewService error: %v", err)
+	}
+	defer svc.Close()
+
+	req := httptest.NewRequest("GET", "http://example.com/cached", nil)
+	req.RemoteAddr = "127.0.0.1:1234"
+
+	key := cache.GetCacheKey(req, "8080")
+	if err := cache.StoreResponse(svc.Cache, key, []byte("cached")); err != nil {
+		t.Fatalf("StoreResponse error: %v", err)
+	}
+
+	data, err := svc.CheckCache(req, "8080")
+	if err != nil {
+		t.Fatalf("CheckCache error: %v", err)
+	}
+	if string(data) != "cached" {
+		t.Fatalf("expected cached response, got %s", string(data))
+	}
+}
+
+func TestServiceLogEvent(t *testing.T) {
+	cfg := &config.Config{}
+	tmpDir := t.TempDir()
+	tmpLog := filepath.Join(tmpDir, "eventlog.json")
+
+	svc, err := NewServiceFromConfig(context.Background(), cfg, nil, Options{
+		LLMProvider:  "openai",
+		LLMModel:     "gpt-3.5-turbo-1106",
+		LLMAPIKey:    "dummy",
+		EventLogFile: tmpLog,
+		CacheDBFile:  ":memory:",
+	})
+	if err != nil {
+		t.Fatalf("NewService error: %v", err)
+	}
+	defer svc.Close()
+
+	req := httptest.NewRequest("GET", "http://example.com", nil)
+	resp := llm.JSONResponse{Headers: map[string]string{"Content-Type": "text/plain"}, Body: "hi"}
+
+	svc.LogEvent(req, resp, "8080", "llm", nil)
+
+	contents, err := os.ReadFile(tmpLog)
+	if err != nil {
+		t.Fatalf("failed reading log file: %v", err)
+	}
+	if !strings.Contains(string(contents), "successfulResponse") {
+		t.Fatalf("log file missing entry: %s", string(contents))
 	}
 }
