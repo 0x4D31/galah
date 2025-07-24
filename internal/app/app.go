@@ -51,16 +51,18 @@ const (
 func (a *App) Run() error {
 	printBanner()
 
-	logger = cblog.NewWithOptions(nil, cblog.Options{})
+	// Set up global logger configuration
+	cblog.SetPrefix("APP")
+	cblog.SetTimeFormat("2006/01/02 15:04:05")
 	arg.MustParse(&args)
 
 	if err := logLevel(args.LogLevel); err != nil {
-		logger.Fatalf("error setting log level: %s", err)
+		cblog.Fatalf("error setting log level: %s", err)
 	}
 
 	err := a.init()
 	if err != nil {
-		logger.Fatalf("error initializing app: %s", err)
+		cblog.Fatalf("error initializing app: %s", err)
 	}
 
 	a.Service, err = galah.NewServiceFromConfig(context.Background(), a.Config, a.Rules, galah.Options{
@@ -77,7 +79,7 @@ func (a *App) Run() error {
 		LogLevel:         args.LogLevel,
 	})
 	if err != nil {
-		logger.Fatalf("error creating service: %s", err)
+		cblog.Fatalf("error creating service: %s", err)
 	}
 
 	srv := server.Server{
@@ -88,7 +90,7 @@ func (a *App) Run() error {
 		Rules:         a.Rules,
 		EventLogger:   a.EventLogger,
 		LLMConfig:     a.LLMConfig,
-		Logger:        a.Logger,
+		Logger:        cblog.Default(),
 		Model:         a.Model,
 		Service:       a.Service,
 		Suricata:      a.Suricata,
@@ -101,11 +103,11 @@ func (a *App) Run() error {
 		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 		<-sig
 		if err := a.Service.Close(); err != nil {
-			a.Logger.Errorf("error closing service: %s", err)
+			cblog.Errorf("error closing service: %s", err)
 		}
 	}()
 	if err := srv.StartServers(); err != nil {
-		logger.Fatalf("application failed to start: %s", err)
+		cblog.Fatalf("application failed to start: %s", err)
 	}
 
 	return nil
@@ -157,7 +159,7 @@ func (a *App) init() error {
 		CacheTTL:  sessionTTL,
 	})
 
-	eventLogger, err := el.New(args.EventLogFile, modelConfig, enrichCache, sessionizer, logger)
+	eventLogger, err := el.New(args.EventLogFile, modelConfig, enrichCache, sessionizer, cblog.Default())
 	if err != nil {
 		return err
 	}
@@ -167,7 +169,7 @@ func (a *App) init() error {
 	a.Rules = rules
 	a.EventLogger = eventLogger
 	a.LLMConfig = modelConfig
-	a.Logger = logger
+	a.Logger = cblog.Default()
 	a.Model = model
 	a.Servers = make(map[uint16]*http.Server)
 
@@ -180,7 +182,7 @@ func (a *App) init() error {
 		if err := rs.LoadRules(args.SuricataRulesDir); err != nil {
 			return fmt.Errorf("error loading Suricata rules from %s: %w", args.SuricataRulesDir, err)
 		}
-		a.Logger.Infof("loaded %d Suricata rules from %s", len(rs.Rules), args.SuricataRulesDir)
+		cblog.Infof("loaded %d Suricata rules from %s", len(rs.Rules), args.SuricataRulesDir)
 		a.Suricata = rs
 	}
 
@@ -192,7 +194,7 @@ func logLevel(level string) error {
 	if err != nil {
 		return err
 	}
-	logger.SetLevel(lvl)
+	cblog.SetLevel(lvl)
 	return nil
 }
 

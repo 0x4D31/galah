@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -69,15 +68,18 @@ type Service struct {
 
 // NewService loads configuration and initializes the components required for response generation.
 func NewService(ctx context.Context, opts Options) (*Service, error) {
-	logger := opts.Logger
-	if logger == nil {
-		logger = cblog.NewWithOptions(os.Stderr, cblog.Options{})
-	}
 	if opts.LogLevel != "" {
 		level, err := cblog.ParseLevel(opts.LogLevel)
 		if err == nil {
-			logger.SetLevel(level)
+			cblog.SetLevel(level)
 		}
+	}
+	cblog.SetPrefix("GALAH")
+	cblog.SetTimeFormat("2006/01/02 15:04:05")
+
+	logger := opts.Logger
+	if logger == nil {
+		logger = cblog.Default()
 	}
 
 	if opts.ConfigFile == "" {
@@ -110,15 +112,18 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 // NewServiceFromConfig initializes a Service using the provided configuration
 // and rule set. The ConfigFile and RulesConfigFile values from opts are ignored.
 func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options) (*Service, error) {
-	logger := opts.Logger
-	if logger == nil {
-		logger = cblog.NewWithOptions(os.Stderr, cblog.Options{})
-	}
 	if opts.LogLevel != "" {
 		level, err := cblog.ParseLevel(opts.LogLevel)
 		if err == nil {
-			logger.SetLevel(level)
+			cblog.SetLevel(level)
 		}
+	}
+	cblog.SetPrefix("GALAH")
+	cblog.SetTimeFormat("2006/01/02 15:04:05")
+
+	logger := opts.Logger
+	if logger == nil {
+		logger = cblog.Default()
 	}
 
 	if opts.ConfigFile == "" {
