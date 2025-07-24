@@ -234,3 +234,11 @@ svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules
 ```
 
 To turn off rule checking completely, omit `RulesConfigFile` when creating a service or pass `nil`/an empty slice to `NewServiceFromConfig`. Any unused option fields can be left empty to rely on their defaults.
+
+The service also exposes helper methods for cache and event logging when used as a library:
+
+```go
+respBytes, _ := svc.CheckCache(req, "8080") // returns nil if no cached entry
+
+svc.LogEvent(req, llm.JSONResponse{Headers: map[string]string{"Content-Type": "text/plain"}, Body: "hi"}, "8080", "llm", nil)
+```

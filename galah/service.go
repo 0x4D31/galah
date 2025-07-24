@@ -15,6 +15,7 @@ import (
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
 	cblog "github.com/charmbracelet/log"
+	"github.com/0x4d31/galah/pkg/suricata"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -206,6 +207,23 @@ func (s *Service) GenerateHTTPResponse(r *http.Request, port string) ([]byte, er
 	}
 
 	return resp, nil
+}
+
+// CheckCache verifies if a response for the given request and port exists in
+// the service's cache. It returns the cached response bytes if found and valid.
+func (s *Service) CheckCache(r *http.Request, port string) ([]byte, error) {
+	return cache.CheckCache(s.Cache, r, port, s.CacheDuration)
+}
+
+// LogEvent writes a successfulResponse entry to the configured event log file.
+// Suricata rule matches can optionally be provided.
+func (s *Service) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSource string, suricataMatches []suricata.Rule) {
+	s.EventLogger.LogEvent(r, resp, port, respSource, suricataMatches)
+}
+
+// LogError writes a failedResponse entry to the configured event log file.
+func (s *Service) LogError(r *http.Request, resp, port string, err error) {
+	s.EventLogger.LogError(r, resp, port, err)
 }
 
 // Close releases resources held by the Service.
