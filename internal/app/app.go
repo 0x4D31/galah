@@ -188,11 +188,7 @@ func (a *App) init() error {
 }
 
 func logLevel(level string) error {
-	l, err := cblog.ParseLevel(level)
-	if err != nil {
-		return err
-	}
-	logger.SetLevel(l)
+	logger.SetLevel(cblog.ParseLevel(level))
 	return nil
 }
 

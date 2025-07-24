@@ -32,7 +32,7 @@ func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, s
 	if err != nil {
 		return nil, err
 	}
-	eventLogger.Out = evFile
+	eventLogger.SetOutput(evFile)
 
 	return &Logger{
 		EnrichCache: eCache,
