@@ -34,8 +34,8 @@ go build -o bin/galah ./cmd/galah
 ██   ███ ███████ ██      ███████ ███████ 
 ██    ██ ██   ██ ██      ██   ██ ██   ██ 
  ██████  ██   ██ ███████ ██   ██ ██   ██ 
-  llm-based web honeypot // version 1.0
-        author: Adel "0x4D31" Karimi
+  llm-based web honeypot | version 1.1.1
+         author: Adel "0x4D31" Ka
 
 Usage: galah --provider PROVIDER --model MODEL [--server-url SERVER-URL] [--temperature TEMPERATURE] [--api-key API-KEY] [--cloud-location CLOUD-LOCATION] [--cloud-project CLOUD-PROJECT] [--interface INTERFACE] [--config-file CONFIG-FILE] [--rules-config-file RULES-CONFIG-FILE] [--event-log-file EVENT-LOG-FILE] [--cache-db-file CACHE-DB-FILE] [--cache-duration CACHE-DURATION] [--log-level LOG-LEVEL] [--suricata-enabled] [--suricata-rules-dir SURICATA-RULES-DIR]
 

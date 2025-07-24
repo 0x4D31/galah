@@ -41,7 +41,7 @@ type App struct {
 var logger *cblog.Logger
 
 const (
-	version    = "1.0"
+	version    = "1.1.1"
 	CacheSize  = 1_000_000
 	lookupTTL  = 1 * time.Hour
 	sessionTTL = 2 * time.Minute
