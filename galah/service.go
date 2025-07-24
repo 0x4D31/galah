@@ -74,7 +74,10 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 		logger = cblog.NewWithOptions(os.Stderr, cblog.Options{})
 	}
 	if opts.LogLevel != "" {
-		logger.SetLevel(cblog.ParseLevel(opts.LogLevel))
+		level, err := cblog.ParseLevel(opts.LogLevel)
+		if err == nil {
+			logger.SetLevel(level)
+		}
 	}
 
 	if opts.ConfigFile == "" {
@@ -112,7 +115,10 @@ func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []confi
 		logger = cblog.NewWithOptions(os.Stderr, cblog.Options{})
 	}
 	if opts.LogLevel != "" {
-		logger.SetLevel(cblog.ParseLevel(opts.LogLevel))
+		level, err := cblog.ParseLevel(opts.LogLevel)
+		if err == nil {
+			logger.SetLevel(level)
+		}
 	}
 
 	if opts.ConfigFile == "" {
