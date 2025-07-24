@@ -24,7 +24,7 @@ import (
 	el "github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
 	"github.com/0x4d31/galah/pkg/suricata"
-	"github.com/sirupsen/logrus"
+	cblog "github.com/charmbracelet/log"
 	"github.com/tmc/langchaingo/llms"
 	"golang.org/x/sync/errgroup"
 )
@@ -49,7 +49,7 @@ func safeMatch(rs *suricata.RuleSet, req *http.Request, body string) (out []suri
 	defer func() {
 		if rec := recover(); rec != nil {
 			// log the panic and continue
-			logrus.Errorf("panic in Suricata.Match: %v", rec)
+			cblog.WithPrefix("GALAH").Errorf("panic in Suricata.Match: %v", rec)
 		}
 	}()
 	return rs.Match(req, body)
@@ -66,7 +66,7 @@ type Server struct {
 	Rules         []config.Rule
 	EventLogger   *el.Logger
 	LLMConfig     llm.Config
-	Logger        *logrus.Logger
+	Logger        *cblog.Logger
 	Model         llms.Model
 	Suricata      *suricata.RuleSet
 	Servers       map[uint16]*http.Server
@@ -100,7 +100,7 @@ func (s *Server) startServer(pc config.PortConfig, mu *sync.Mutex) error {
 		err = fmt.Errorf("unknown protocol for port %d", pc.Port)
 	}
 	if err != nil {
-		s.Logger.Errorf("error starting server on port %d: %s", pc.Port, err)
+		s.Logger.WithPrefix("GALAH").Errorf("error starting server on port %d: %s", pc.Port, err)
 		return err
 	}
 
@@ -119,7 +119,7 @@ func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
 	if s.Interface != "" {
 		ip, err = getInterfaceIP(s.Interface)
 		if err != nil {
-			s.Logger.Errorln(err)
+			s.Logger.WithPrefix("GALAH").Error(err)
 		}
 	}
 	serverAddr := net.JoinHostPort(ip, fmt.Sprintf("%d", pc.Port))
@@ -145,13 +145,13 @@ func (s *Server) StartTLSServer(server *http.Server, pc config.PortConfig) error
 		return fmt.Errorf("TLS profile is incomplete for port %d", pc.Port)
 	}
 
-	s.Logger.Infof("starting HTTPS server on %s with TLS profile: %s", server.Addr, pc.TLSProfile)
+	s.Logger.WithPrefix("GALAH").Infof("starting HTTPS server on %s with TLS profile: %s", server.Addr, pc.TLSProfile)
 	return server.ListenAndServeTLS(tlsConfig.Certificate, tlsConfig.Key)
 }
 
 // StartHTTPServer starts the configured HTTP server.
 func (s *Server) StartHTTPServer(server *http.Server, pc config.PortConfig) error {
-	s.Logger.Infof("starting HTTP server on %s", server.Addr)
+	s.Logger.WithPrefix("GALAH").Infof("starting HTTP server on %s", server.Addr)
 	return server.ListenAndServe()
 }
 
@@ -168,7 +168,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 		limited := io.LimitReader(r.Body, maxBodySize)
 		bodyBytes, err = io.ReadAll(limited)
 		if err != nil {
-			s.Logger.Errorf("error reading request body: %s", err)
+			s.Logger.WithPrefix("GALAH").Errorf("error reading request body: %s", err)
 		}
 		// Restore Body for downstream handlers (and LLM)
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
@@ -176,7 +176,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 	reqBodyStr := string(bodyBytes)
 
 	port := s.extractPort(serverAddr)
-	s.Logger.Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
+	s.Logger.WithPrefix("GALAH").Infof("port %s received a request for %q, from source %s", port, r.URL.String(), r.RemoteAddr)
 
 	// Check for applicable rules before generating the response
 	for _, rule := range rules {
@@ -187,7 +187,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 			if rule.Response.Type == "static" {
 				resp, err := os.ReadFile(rule.Response.Template)
 				if err != nil {
-					s.Logger.Error(err)
+					s.Logger.WithPrefix("GALAH").Error(err)
 				} else {
 					response = resp
 					respSource = "static"
@@ -195,7 +195,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 				}
 			}
 		} else if err != nil {
-			s.Logger.Error(err)
+			s.Logger.WithPrefix("GALAH").Error(err)
 		}
 	}
 
@@ -204,9 +204,9 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 		response, err = cache.CheckCache(s.Cache, r, port, s.CacheDuration)
 		if err != nil {
 			if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
-				s.Logger.Infof("cache check for %q: %s", r.URL.String(), err)
+				s.Logger.WithPrefix("GALAH").Infof("cache check for %q: %s", r.URL.String(), err)
 			} else {
-				s.Logger.Error(err)
+				s.Logger.WithPrefix("GALAH").Error(err)
 			}
 		} else {
 			respSource = "cache"
@@ -216,7 +216,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 	// Generate response using the service's LLM handler
 	if response == nil {
 		if s.Service == nil {
-			s.Logger.Error("service is not configured")
+			s.Logger.WithPrefix("GALAH").Error("service is not configured")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -230,20 +230,20 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 
 	var respData llm.JSONResponse
 	if err := json.Unmarshal(response, &respData); err != nil {
-		s.Logger.Errorf("error unmarshalling the JSON-encoded data: %s", err)
+		s.Logger.WithPrefix("GALAH").Errorf("error unmarshalling the JSON-encoded data: %s", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	s.sendResponse(w, respData)
-	s.Logger.Infof("sent the response to %s (source: %s)", r.RemoteAddr, respSource)
+	s.Logger.WithPrefix("GALAH").Infof("sent the response to %s (source: %s)", r.RemoteAddr, respSource)
 
 	// Asynchronously perform Suricata matching and event logging to avoid blocking the handler
 	if s.Suricata != nil {
 		go func(req *http.Request, body string, resp llm.JSONResponse, port, src string) {
 			matches := safeMatch(s.Suricata, req, body)
 			for _, m := range matches {
-				s.Logger.Infof("Suricata SID=%s – %q", m.SID, m.Msg)
+				s.Logger.WithPrefix("GALAH").Infof("Suricata SID=%s – %q", m.SID, m.Msg)
 			}
 			s.EventLogger.LogEvent(req, resp, port, src, matches)
 		}(r, reqBodyStr, respData, port, respSource)
@@ -269,7 +269,7 @@ func (s *Server) sendResponse(w http.ResponseWriter, response llm.JSONResponse) 
 	}
 
 	if _, err := w.Write([]byte(response.Body)); err != nil {
-		s.Logger.Errorf("error writing response: %s", err)
+		s.Logger.WithPrefix("GALAH").Errorf("error writing response: %s", err)
 	}
 }
 
@@ -284,18 +284,18 @@ func (s *Server) ListenForShutdownSignals() {
 
 	go func() {
 		<-sig
-		s.Logger.Infof("received shutdown signal. shutting down servers...")
+		s.Logger.WithPrefix("GALAH").Infof("received shutdown signal. shutting down servers...")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		for _, server := range s.Servers {
 			if err := server.Shutdown(ctx); err != nil {
-				s.Logger.Errorf("error shutting down server: %s", err)
+				s.Logger.WithPrefix("GALAH").Errorf("error shutting down server: %s", err)
 			}
 		}
 
-		s.Logger.Infoln("all servers shut down gracefully.")
+		s.Logger.WithPrefix("GALAH").Info("all servers shut down gracefully.")
 		os.Exit(0)
 	}()
 }

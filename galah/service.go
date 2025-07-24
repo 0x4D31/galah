@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	el "github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
-	"github.com/sirupsen/logrus"
+	cblog "github.com/charmbracelet/log"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -51,6 +52,7 @@ type Options struct {
 	CacheDBFile      string
 	CacheDuration    int
 	LogLevel         string
+	Logger           *cblog.Logger
 }
 
 // Service encapsulates the components required to generate HTTP responses.
@@ -61,15 +63,18 @@ type Service struct {
 	Rules         []config.Rule
 	EventLogger   *el.Logger
 	LLMConfig     llm.Config
-	Logger        *logrus.Logger
+	Logger        *cblog.Logger
 	Model         llms.Model
 }
 
 // NewService loads configuration and initializes the components required for response generation.
 func NewService(ctx context.Context, opts Options) (*Service, error) {
-	logger := logrus.New()
+	logger := opts.Logger
+	if logger == nil {
+		logger = cblog.NewWithOptions(os.Stderr, cblog.Options{})
+	}
 	if opts.LogLevel != "" {
-		if lvl, err := logrus.ParseLevel(opts.LogLevel); err == nil {
+		if lvl, err := cblog.ParseLevel(opts.LogLevel); err == nil {
 			logger.SetLevel(lvl)
 		}
 	}
@@ -104,9 +109,12 @@ func NewService(ctx context.Context, opts Options) (*Service, error) {
 // NewServiceFromConfig initializes a Service using the provided configuration
 // and rule set. The ConfigFile and RulesConfigFile values from opts are ignored.
 func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options) (*Service, error) {
-	logger := logrus.New()
+	logger := opts.Logger
+	if logger == nil {
+		logger = cblog.NewWithOptions(os.Stderr, cblog.Options{})
+	}
 	if opts.LogLevel != "" {
-		if lvl, err := logrus.ParseLevel(opts.LogLevel); err == nil {
+		if lvl, err := cblog.ParseLevel(opts.LogLevel); err == nil {
 			logger.SetLevel(lvl)
 		}
 	}
@@ -124,7 +132,7 @@ func NewServiceFromConfig(ctx context.Context, cfg *config.Config, rules []confi
 	return createService(ctx, cfg, rules, opts, logger)
 }
 
-func createService(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options, logger *logrus.Logger) (*Service, error) {
+func createService(ctx context.Context, cfg *config.Config, rules []config.Rule, opts Options, logger *cblog.Logger) (*Service, error) {
 	modelCfg := llm.Config{
 		Provider:      opts.LLMProvider,
 		Model:         opts.LLMModel,
@@ -169,24 +177,24 @@ func createService(ctx context.Context, cfg *config.Config, rules []config.Rule,
 func (s *Service) GenerateHTTPResponse(r *http.Request, port string) ([]byte, error) {
 	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
 	if err != nil {
-		s.Logger.Errorf("error creating llm message: %s", err)
+		s.Logger.WithPrefix("GALAH").Errorf("error creating llm message: %s", err)
 		return nil, err
 	}
 
 	respStr, err := llm.GenerateLLMResponse(r.Context(), s.Model, s.LLMConfig.Temperature, messages)
 	if err != nil {
-		s.Logger.Errorf("error generating response: %s", err)
+		s.Logger.WithPrefix("GALAH").Errorf("error generating response: %s", err)
 		s.EventLogger.LogError(r, respStr, port, err)
 		return nil, err
 	}
 	resp := []byte(respStr)
 
-	s.Logger.Infof("generated HTTP response: %s", strings.ReplaceAll(respStr, "\n", " "))
+	s.Logger.WithPrefix("GALAH").Infof("generated HTTP response: %s", strings.ReplaceAll(respStr, "\n", " "))
 
 	if s.CacheDuration != 0 {
 		key := cache.GetCacheKey(r, port)
 		if err := cache.StoreResponse(s.Cache, key, resp); err != nil {
-			s.Logger.Errorf("error storing response in cache: %s", err)
+			s.Logger.WithPrefix("GALAH").Errorf("error storing response in cache: %s", err)
 		}
 	}
 

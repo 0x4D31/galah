@@ -7,7 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/alexflint/go-arg v1.4.3
 	github.com/bluele/gcache v0.0.2
-	github.com/sirupsen/logrus v1.9.3
+       github.com/charmbracelet/log v0.2.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tmc/langchaingo v0.1.10
 	golang.org/x/sync v0.6.0

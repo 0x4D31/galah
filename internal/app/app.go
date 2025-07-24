@@ -19,7 +19,7 @@ import (
 	"github.com/0x4d31/galah/pkg/llm"
 	"github.com/0x4d31/galah/pkg/suricata"
 	"github.com/alexflint/go-arg"
-	"github.com/sirupsen/logrus"
+	cblog "github.com/charmbracelet/log"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -31,14 +31,14 @@ type App struct {
 	EventLogger *el.Logger
 	Hostname    string
 	LLMConfig   llm.Config
-	Logger      *logrus.Logger
+	Logger      *cblog.Logger
 	Model       llms.Model
 	Service     *galah.Service
 	Suricata    *suricata.RuleSet
 	Servers     map[uint16]*http.Server
 }
 
-var logger *logrus.Logger
+var logger *cblog.Logger
 
 const (
 	version    = "1.0"
@@ -51,7 +51,7 @@ const (
 func (a *App) Run() error {
 	printBanner()
 
-	logger = logrus.New()
+	logger = cblog.NewWithOptions(nil, cblog.Options{})
 	arg.MustParse(&args)
 
 	if err := logLevel(args.LogLevel); err != nil {
@@ -188,7 +188,7 @@ func (a *App) init() error {
 }
 
 func logLevel(level string) error {
-	l, err := logrus.ParseLevel(level)
+	l, err := cblog.ParseLevel(level)
 	if err != nil {
 		return err
 	}

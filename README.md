@@ -194,7 +194,7 @@ See more examples [here](docs/EXAMPLES.md).
 
 ## Library Usage
 
-The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. If `ConfigFile`, `EventLogFile`, or `CacheDBFile` are omitted, their default paths (`config/config.yaml`, `event_log.json`, and `cache.db`) are used. Specify `RulesConfigFile` to enable rule checking; leaving it empty disables the rule engine entirely.
+The `galah` package can be used as a standalone library. Create a `galah.Service` and call `GenerateHTTPResponse` with an `http.Request` to produce a response. If `ConfigFile`, `EventLogFile`, or `CacheDBFile` are omitted, their default paths (`config/config.yaml`, `event_log.json`, and `cache.db`) are used. Specify `RulesConfigFile` to enable rule checking; leaving it empty disables the rule engine entirely. Options.Logger can be supplied with a *log.Logger; if nil, Galah creates a default text logger.
 
 ```go
 svc, err := galah.NewService(context.Background(), galah.Options{
@@ -205,6 +205,7 @@ svc, err := galah.NewService(context.Background(), galah.Options{
     RulesConfigFile: "config/rules.yaml", // omit to disable rule engine
     EventLogFile: "event_log.json",
     CacheDBFile:  "cache.db",
+    Logger:       log.NewWithOptions(os.Stderr, log.Options{}),
 })
 if err != nil {
     log.Fatal(err)
@@ -228,6 +229,7 @@ svc, err := galah.NewServiceFromConfig(context.Background(), cfg, rulesCfg.Rules
     LLMAPIKey:   "YOUR_KEY",
     EventLogFile: "event_log.json", // use default if empty
     CacheDBFile:  "cache.db",       // use default if empty
+    Logger:       log.NewWithOptions(os.Stderr, log.Options{}),
 })
 ```
 

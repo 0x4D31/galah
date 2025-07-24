@@ -10,7 +10,7 @@ import (
 	"github.com/0x4d31/galah/internal/app"
 	"github.com/0x4d31/galah/internal/config"
 	"github.com/0x4d31/galah/internal/server"
-	"github.com/sirupsen/logrus"
+	cblog "github.com/charmbracelet/log"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -32,7 +32,7 @@ func TestStartServers(t *testing.T) {
 
 	a := &app.App{
 		Config: &config.Config{},
-		Logger: logrus.New(),
+		Logger: cblog.NewWithOptions(nil, cblog.Options{}),
 	}
 
 	for _, tt := range tests {
@@ -75,7 +75,7 @@ func TestStartHTTPServer(t *testing.T) {
 
 	a := &app.App{
 		Config: &config.Config{},
-		Logger: logrus.New(),
+		Logger: cblog.NewWithOptions(nil, cblog.Options{}),
 	}
 
 	// Start a dummy server on port 8080 to occupy it
@@ -145,7 +145,7 @@ func TestStartTLSServer(t *testing.T) {
 				},
 			},
 		},
-		Logger: logrus.New(),
+		Logger: cblog.NewWithOptions(nil, cblog.Options{}),
 	}
 
 	for _, tt := range tests {

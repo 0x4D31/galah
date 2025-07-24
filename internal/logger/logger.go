@@ -15,8 +15,8 @@ import (
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
 	"github.com/0x4d31/galah/pkg/suricata"
+	cblog "github.com/charmbracelet/log"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -26,11 +26,8 @@ const (
 )
 
 // New creates a new Logger instance with the specified configuration.
-func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, sessionizer *Sessionizer, l *logrus.Logger) (*Logger, error) {
-	eventLogger := logrus.New()
-	eventLogger.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: time.RFC3339Nano,
-	})
+func New(eventLogFile string, modelConfig llm.Config, eCache *enrich.Enricher, sessionizer *Sessionizer, l *cblog.Logger) (*Logger, error) {
+	eventLogger := cblog.NewWithOptions(nil, cblog.Options{Formatter: cblog.JSONFormatter, TimeFormat: time.RFC3339Nano})
 	evFile, err := os.OpenFile(eventLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
@@ -59,7 +56,7 @@ func (l *Logger) LogError(r *http.Request, resp, port string, err error) {
 		},
 	}
 
-	l.EventLogger.WithFields(fields).Error("failedResponse: returned 500 internal server error")
+	l.EventLogger.Error("failedResponse: returned 500 internal server error", mapToArgs(fields)...)
 }
 
 // LogEvent logs a successfulResponse event, including any matched Suricata rules.
@@ -89,10 +86,10 @@ func (l *Logger) LogEvent(r *http.Request, resp llm.JSONResponse, port, respSour
 		fields["suricataMatches"] = matches
 	}
 
-	l.EventLogger.WithFields(fields).Info("successfulResponse")
+	l.EventLogger.Info("successfulResponse", mapToArgs(fields)...)
 }
 
-func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
+func (l *Logger) commonFields(r *http.Request, port string) map[string]any {
 	now := time.Now()
 
 	srcIP, srcPort, err := net.SplitHostPort(r.RemoteAddr)
@@ -129,7 +126,7 @@ func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
 		l.Logger.Errorf("error generating session ID for %q: %s", srcIP, err)
 	}
 
-	return logrus.Fields{
+	return map[string]any{
 		"eventTime":  now,
 		"srcIP":      srcIP,
 		"srcHost":    host,
@@ -155,7 +152,7 @@ func (l *Logger) commonFields(r *http.Request, port string) logrus.Fields {
 	}
 }
 
-func errorFields(err error, resp string) logrus.Fields {
+func errorFields(err error, resp string) map[string]any {
 	errMsg := err.Error()
 	var errorType string
 
@@ -171,7 +168,7 @@ func errorFields(err error, resp string) logrus.Fields {
 		errMsg = strings.ReplaceAll(errMsg, errorContentGeneration+": ", "")
 	}
 
-	return logrus.Fields{
+	return map[string]any{
 		"type":            errorType,
 		"msg":             errMsg,
 		"invalidResponse": resp,
@@ -207,4 +204,12 @@ func convertMap(input map[string][]string) map[string]string {
 	}
 
 	return result
+}
+
+func mapToArgs(m map[string]any) []any {
+	args := make([]any, 0, len(m)*2)
+	for k, v := range m {
+		args = append(args, k, v)
+	}
+	return args
 }

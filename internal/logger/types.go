@@ -5,17 +5,17 @@ import (
 
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
-	"github.com/sirupsen/logrus"
+	cblog "github.com/charmbracelet/log"
 )
 
 // Logger contains the components for logging.
 type Logger struct {
 	EnrichCache *enrich.Enricher
 	Sessionizer *Sessionizer
-	EventLogger *logrus.Logger
+	EventLogger *cblog.Logger
 	EventFile   *os.File
 	LLMConfig   llm.Config
-	Logger      *logrus.Logger
+	Logger      *cblog.Logger
 }
 
 // HTTPRequest contains information about the HTTP request.
