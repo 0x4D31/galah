@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/0x4d31/galah/pkg/llm"
-	"github.com/sirupsen/logrus"
+	cblog "github.com/charmbracelet/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/tmc/langchaingo/llms"
 )
@@ -15,7 +15,7 @@ type MockModel struct {
 	CallFunc            func(ctx context.Context, method string, opts ...llms.CallOption) (string, error)
 }
 
-var ErrorLogger *logrus.Logger
+var ErrorLogger *cblog.Logger
 
 func (m *MockModel) GenerateContent(ctx context.Context, messages []llms.MessageContent, opts ...llms.CallOption) (*llms.ContentResponse, error) {
 	if m.GenerateContentFunc != nil {
