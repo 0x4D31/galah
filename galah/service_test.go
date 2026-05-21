@@ -2,6 +2,7 @@ package galah
 
 import (
 	"context"
+	"errors"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -206,6 +207,41 @@ func TestServiceCheckCache(t *testing.T) {
 	}
 	if string(data) != "cached" {
 		t.Fatalf("expected cached response, got %s", string(data))
+	}
+}
+
+func TestServiceCheckCacheDoesNotReplayAcrossDifferentBodies(t *testing.T) {
+	cfg := &config.Config{}
+	tmpLog := filepath.Join(t.TempDir(), "eventlog.json")
+	svc, err := NewServiceFromConfig(context.Background(), cfg, nil, Options{
+		LLMProvider:   "openai",
+		LLMModel:      "gpt-3.5-turbo-1106",
+		LLMAPIKey:     "dummy",
+		EventLogFile:  tmpLog,
+		CacheDBFile:   ":memory:",
+		CacheDuration: 1,
+	})
+	if err != nil {
+		t.Fatalf("NewService error: %v", err)
+	}
+	defer svc.Close()
+
+	poisonReq := httptest.NewRequest("POST", "http://example.com/cached", strings.NewReader(`{"message":"attack"}`))
+	poisonReq.RemoteAddr = "127.0.0.1:1234"
+	poisonReq.Header.Set("Content-Type", "application/json")
+
+	key := cache.GetCacheKey(poisonReq, "8080")
+	if err := cache.StoreResponse(svc.Cache, key, []byte("poisoned")); err != nil {
+		t.Fatalf("StoreResponse error: %v", err)
+	}
+
+	benignReq := httptest.NewRequest("POST", "http://example.com/cached", strings.NewReader(`{"message":"benign"}`))
+	benignReq.RemoteAddr = "127.0.0.1:1234"
+	benignReq.Header.Set("Content-Type", "application/json")
+
+	data, err := svc.CheckCache(benignReq, "8080")
+	if !errors.Is(err, cache.ErrCacheMiss) {
+		t.Fatalf("expected cache miss for different request body, got data=%q err=%v", string(data), err)
 	}
 }
 
