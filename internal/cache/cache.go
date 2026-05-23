@@ -1,9 +1,12 @@
 package cache
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"net/http"
+	"net/http/httputil"
 	"sync"
 	"time"
 )
@@ -70,7 +73,13 @@ func CheckCache(client *sql.DB, r *http.Request, port string, cacheDuration int)
 
 // GetCacheKey constructs a cache key based on the provided parameters.
 func GetCacheKey(r *http.Request, port string) string {
-	return port + "_" + r.URL.String()
+	dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		return port + "_" + r.Method + "_" + r.URL.String()
+	}
+
+	sum := sha256.Sum256(dump)
+	return port + "_" + hex.EncodeToString(sum[:])
 }
 
 // StoreResponse saves the response in the cache with the specified key.
