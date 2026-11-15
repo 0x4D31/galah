@@ -8,6 +8,7 @@ var args struct {
 	LLMAPIKey        string  `arg:"-k,--api-key,env:LLM_API_KEY" help:"LLM API Key"`
 	LLMCloudLocation string  `arg:"--cloud-location,env:LLM_CLOUD_LOCATION" help:"LLM cloud location region (required for GCP's Vertex AI)"`
 	LLMCloudProject  string  `arg:"--cloud-project,env:LLM_CLOUD_PROJECT" help:"LLM cloud project ID (required for GCP's Vertex AI)"`
+	LLMKeepAlive     string  `arg:"--keep-alive,env:LLM_KEEP_ALIVE" help:"Ollama only: how long the model stays loaded after a request (e.g. 1h; -1 = always). Empty: server default (5m)"`
 	Interface        string  `arg:"-i,--interface" help:"interface to serve on"`
 	ConfigFile       string  `arg:"-c,--config-file" help:"Path to config file" default:"config/config.yaml"`
 	RulesConfigFile  string  `arg:"-r,--rules-config-file" help:"Path to rules config file (disable rules if empty)" default:""`

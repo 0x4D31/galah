@@ -24,6 +24,9 @@ type Config struct {
 	Provider      string
 	ServerURL     string
 	Temperature   float64
+	// KeepAlive is how long Ollama keeps the model loaded after a request
+	// ("1h", "-1" = always; empty = server default, 5m). Ollama only.
+	KeepAlive string
 }
 
 // JSONResponse defines the expected JSON response from the LLM.
