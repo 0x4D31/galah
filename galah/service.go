@@ -50,8 +50,9 @@ type Options struct {
 	// GenerationTimeout bounds one LLM generation. Generations are detached from the client's request, so a
 	// scanner that hangs up doesn't cancel them: the response is still cached for the next visitor. 0 = 2m.
 	GenerationTimeout time.Duration
-	// MaxGenerations caps LLM generations running at once (0 = no cap). Detached generations survive the client,
-	// so without a cap a burst of unique URLs from clients that hang up queues unbounded work on the model.
+	// MaxGenerations caps LLM generations running at once. Detached generations survive the client, so without a
+	// cap a burst of unique URLs from clients that hang up would queue unbounded work (and cost) on the model.
+	// 0 = DefaultMaxGenerations, negative = no cap.
 	MaxGenerations  int
 	ConfigFile      string
 	RulesConfigFile string
@@ -201,9 +202,16 @@ func createService(ctx context.Context, cfg *config.Config, rules []config.Rule,
 	}, nil
 }
 
+// DefaultMaxGenerations is the cap used when Options.MaxGenerations is 0. Upgrading must not turn a disconnect
+// (which used to cancel the work) into unbounded detached generations, so the default is a small cap, not none.
+const DefaultMaxGenerations = 4
+
 func newSlots(n int) chan struct{} {
-	if n <= 0 {
-		return nil
+	if n < 0 {
+		return nil // no cap
+	}
+	if n == 0 {
+		n = DefaultMaxGenerations
 	}
 	return make(chan struct{}, n)
 }

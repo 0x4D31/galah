@@ -200,3 +200,19 @@ func TestMaxGenerationsCap(t *testing.T) {
 		t.Fatalf("ok=%d busy=%d, want 2 and 6", ok, busy)
 	}
 }
+
+// The cap is on by default: 0 means DefaultMaxGenerations, only a negative value turns it off.
+func TestMaxGenerationsDefault(t *testing.T) {
+	if c := cap(newSlots(0)); c != DefaultMaxGenerations || DefaultMaxGenerations != 4 {
+		t.Fatalf("default cap %d, want %d (= 4)", c, DefaultMaxGenerations)
+	}
+	if s := newSlots(-1); s != nil {
+		t.Fatal("-1 must mean no cap")
+	}
+	if c := cap(newSlots(2)); c != 2 {
+		t.Fatalf("explicit cap %d, want 2", c)
+	}
+	if c := cap(newFinishService(t).slots); c != DefaultMaxGenerations {
+		t.Fatalf("a service built without MaxGenerations has cap %d, want the default", c)
+	}
+}

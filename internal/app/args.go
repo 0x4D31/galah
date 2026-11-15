@@ -18,6 +18,6 @@ var args struct {
 	SuricataEnabled   bool    `arg:"--suricata-enabled" help:"Enable Suricata HTTP rule checking" default:"false"`
 	SuricataRulesDir  string  `arg:"--suricata-rules-dir" help:"Directory containing Suricata .rules files to check HTTP requests against" default:""`
 	GenerationTimeout int     `arg:"--generation-timeout,env:GENERATION_TIMEOUT" help:"Seconds one LLM generation may take. Generations finish (and are cached) even if the client hangs up" default:"120"`
-	MaxGenerations    int     `arg:"--max-generations,env:MAX_GENERATIONS" help:"Most LLM generations running at once; more fail fast instead of queueing (0 = no cap)" default:"0"`
+	MaxGenerations    int     `arg:"--max-generations,env:MAX_GENERATIONS" help:"Most LLM generations running at once; more fail fast instead of queueing (-1 = no cap)" default:"4"`
 	ServeStale        bool    `arg:"--serve-stale,env:SERVE_STALE" help:"Answer with an expired cached response at once and regenerate it in the background" default:"false"`
 }
