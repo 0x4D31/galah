@@ -23,6 +23,7 @@ import (
 	"github.com/0x4d31/galah/internal/config"
 	el "github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/0x4d31/galah/pkg/realip"
 	"github.com/0x4d31/galah/pkg/suricata"
 	cblog "github.com/charmbracelet/log"
 	"github.com/tmc/langchaingo/llms"
@@ -70,6 +71,8 @@ type Server struct {
 	Model         llms.Model
 	Suricata      *suricata.RuleSet
 	Servers       map[uint16]*http.Server
+	// RealIP resolves the client behind trusted reverse proxies (nil: use the TCP peer).
+	RealIP *realip.Resolver
 }
 
 // StartServers starts all servers defined in the configuration.
@@ -127,6 +130,7 @@ func (s *Server) SetupServer(pc config.PortConfig) *http.Server {
 	return &http.Server{
 		Addr: serverAddr,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r = s.RealIP.Resolve(r)
 			s.handleRequest(w, r, serverAddr, s.Rules)
 		}),
 		ReadTimeout:  10 * time.Second,

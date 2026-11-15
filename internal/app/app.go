@@ -17,6 +17,7 @@ import (
 	"github.com/0x4d31/galah/internal/server"
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/0x4d31/galah/pkg/realip"
 	"github.com/0x4d31/galah/pkg/suricata"
 	"github.com/alexflint/go-arg"
 	cblog "github.com/charmbracelet/log"
@@ -94,6 +95,14 @@ func (a *App) Run() error {
 		Model:         a.Model,
 		Service:       a.Service,
 		Suricata:      a.Suricata,
+	}
+	if len(args.TrustedProxies) > 0 {
+		res, err := realip.New(args.TrustedProxies, args.RealIPHeaders)
+		if err != nil {
+			cblog.Fatalf("error parsing --trusted-proxies: %s", err)
+		}
+		srv.RealIP = res
+		cblog.Infof("trusting client-IP headers %v from proxies %v", res.Headers, args.TrustedProxies)
 	}
 
 	srv.ListenForShutdownSignals()
