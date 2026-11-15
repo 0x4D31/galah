@@ -62,7 +62,7 @@ func CheckCache(client *sql.DB, r *http.Request, port string, cacheDuration int)
 
 	// Check if the cached record has expired
 	if time.Since(cachedAt) > time.Duration(cacheDuration)*time.Hour {
-		return nil, ErrCacheExpired
+		return response, ErrCacheExpired // the stale response, for callers that serve stale while refreshing
 	}
 
 	return response, err
