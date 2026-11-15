@@ -1,6 +1,7 @@
 package enrich
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -81,7 +82,14 @@ func (e *Enricher) Process(ip string) (*LookupInfo, error) {
 
 	hosts, err := reverseIPLookup(ip)
 	if err != nil {
-		return nil, err
+		// Most scanner IPs have no PTR record. That's a fact about the IP, not a
+		// failure: carry on with the subnet checks and cache the result. Other
+		// DNS errors (timeouts, a broken resolver) are still reported.
+		var dnsErr *net.DNSError
+		if !errors.As(err, &dnsErr) || !dnsErr.IsNotFound {
+			return nil, err
+		}
+		hosts = nil
 	}
 
 	host := ""
@@ -102,9 +110,12 @@ func (e *Enricher) Process(ip string) (*LookupInfo, error) {
 	return &lookupInfo, nil
 }
 
+// lookupAddr is net.LookupAddr, swappable in tests.
+var lookupAddr = net.LookupAddr
+
 // reverseIPLookup performs a reverse IP lookup and returns the names.
 func reverseIPLookup(ip string) ([]string, error) {
-	names, err := net.LookupAddr(ip)
+	names, err := lookupAddr(ip)
 	if err != nil {
 		return nil, err
 	}
