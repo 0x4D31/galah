@@ -46,6 +46,7 @@ type Options struct {
 	LLMAPIKey        string
 	LLMCloudProject  string
 	LLMCloudLocation string
+	LLMKeepAlive     string
 	ConfigFile       string
 	RulesConfigFile  string
 	EventLogFile     string
@@ -149,6 +150,7 @@ func createService(ctx context.Context, cfg *config.Config, rules []config.Rule,
 		APIKey:        opts.LLMAPIKey,
 		CloudProject:  opts.LLMCloudProject,
 		CloudLocation: opts.LLMCloudLocation,
+		KeepAlive:     opts.LLMKeepAlive,
 	}
 
 	model, err := llm.New(ctx, modelCfg)

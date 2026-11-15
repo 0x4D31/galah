@@ -15,6 +15,9 @@ func initOllamaClient(config Config) (llms.Model, error) {
 		ollama.WithServerURL(config.ServerURL),
 		ollama.WithModel(config.Model),
 	}
+	if config.KeepAlive != "" {
+		opts = append(opts, ollama.WithKeepAlive(config.KeepAlive))
+	}
 	m, err := ollama.New(opts...)
 	if err != nil {
 		return nil, err

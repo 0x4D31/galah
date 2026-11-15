@@ -73,6 +73,7 @@ func (a *App) Run() error {
 		LLMAPIKey:        a.LLMConfig.APIKey,
 		LLMCloudProject:  a.LLMConfig.CloudProject,
 		LLMCloudLocation: a.LLMConfig.CloudLocation,
+		LLMKeepAlive:     a.LLMConfig.KeepAlive,
 		EventLogFile:     args.EventLogFile,
 		CacheDBFile:      args.CacheDBFile,
 		CacheDuration:    args.CacheDuration,
@@ -138,6 +139,7 @@ func (a *App) init() error {
 		APIKey:        args.LLMAPIKey,
 		CloudProject:  args.LLMCloudProject,
 		CloudLocation: args.LLMCloudLocation,
+		KeepAlive:     args.LLMKeepAlive,
 	}
 	model, err := llm.New(ctx, modelConfig)
 	if err != nil {
