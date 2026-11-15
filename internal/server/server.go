@@ -70,6 +70,8 @@ type Server struct {
 	Model         llms.Model
 	Suricata      *suricata.RuleSet
 	Servers       map[uint16]*http.Server
+	// ServeStale answers with an expired cached response right away and regenerates it in the background.
+	ServeStale bool
 }
 
 // StartServers starts all servers defined in the configuration.
@@ -203,10 +205,16 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request, serverAdd
 	if response == nil {
 		response, err = cache.CheckCache(s.Cache, r, port, s.CacheDuration)
 		if err != nil {
-			if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
-				s.Logger.WithPrefix("GALAH").Infof("cache check for %q: %s", r.URL.String(), err)
+			if errors.Is(err, cache.ErrCacheExpired) && s.ServeStale && response != nil && s.Service != nil {
+				respSource = "stale"
+				s.Service.RefreshInBackground(r, port)
 			} else {
-				s.Logger.WithPrefix("GALAH").Error(err)
+				response = nil
+				if errors.Is(err, cache.ErrCacheExpired) || errors.Is(err, cache.ErrCacheMiss) {
+					s.Logger.WithPrefix("GALAH").Infof("cache check for %q: %s", r.URL.String(), err)
+				} else {
+					s.Logger.WithPrefix("GALAH").Error(err)
+				}
 			}
 		} else {
 			respSource = "cache"

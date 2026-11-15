@@ -66,17 +66,19 @@ func (a *App) Run() error {
 	}
 
 	a.Service, err = galah.NewServiceFromConfig(context.Background(), a.Config, a.Rules, galah.Options{
-		LLMProvider:      a.LLMConfig.Provider,
-		LLMModel:         a.LLMConfig.Model,
-		LLMServerURL:     a.LLMConfig.ServerURL,
-		LLMTemperature:   a.LLMConfig.Temperature,
-		LLMAPIKey:        a.LLMConfig.APIKey,
-		LLMCloudProject:  a.LLMConfig.CloudProject,
-		LLMCloudLocation: a.LLMConfig.CloudLocation,
-		EventLogFile:     args.EventLogFile,
-		CacheDBFile:      args.CacheDBFile,
-		CacheDuration:    args.CacheDuration,
-		LogLevel:         args.LogLevel,
+		LLMProvider:       a.LLMConfig.Provider,
+		LLMModel:          a.LLMConfig.Model,
+		LLMServerURL:      a.LLMConfig.ServerURL,
+		LLMTemperature:    a.LLMConfig.Temperature,
+		LLMAPIKey:         a.LLMConfig.APIKey,
+		LLMCloudProject:   a.LLMConfig.CloudProject,
+		LLMCloudLocation:  a.LLMConfig.CloudLocation,
+		GenerationTimeout: time.Duration(args.GenerationTimeout) * time.Second,
+		MaxGenerations:    args.MaxGenerations,
+		EventLogFile:      args.EventLogFile,
+		CacheDBFile:       args.CacheDBFile,
+		CacheDuration:     args.CacheDuration,
+		LogLevel:          args.LogLevel,
 	})
 	if err != nil {
 		cblog.Fatalf("error creating service: %s", err)
@@ -95,6 +97,7 @@ func (a *App) Run() error {
 		Service:       a.Service,
 		Suricata:      a.Suricata,
 	}
+	srv.ServeStale = args.ServeStale
 
 	srv.ListenForShutdownSignals()
 

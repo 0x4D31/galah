@@ -14,9 +14,10 @@ import (
 	el "github.com/0x4d31/galah/internal/logger"
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
-	cblog "github.com/charmbracelet/log"
 	"github.com/0x4d31/galah/pkg/suricata"
+	cblog "github.com/charmbracelet/log"
 	"github.com/tmc/langchaingo/llms"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -46,13 +47,19 @@ type Options struct {
 	LLMAPIKey        string
 	LLMCloudProject  string
 	LLMCloudLocation string
-	ConfigFile       string
-	RulesConfigFile  string
-	EventLogFile     string
-	CacheDBFile      string
-	CacheDuration    int
-	LogLevel         string
-	Logger           *cblog.Logger
+	// GenerationTimeout bounds one LLM generation. Generations are detached from the client's request, so a
+	// scanner that hangs up doesn't cancel them: the response is still cached for the next visitor. 0 = 2m.
+	GenerationTimeout time.Duration
+	// MaxGenerations caps LLM generations running at once (0 = no cap). Detached generations survive the client,
+	// so without a cap a burst of unique URLs from clients that hang up queues unbounded work on the model.
+	MaxGenerations  int
+	ConfigFile      string
+	RulesConfigFile string
+	EventLogFile    string
+	CacheDBFile     string
+	CacheDuration   int
+	LogLevel        string
+	Logger          *cblog.Logger
 }
 
 // Service encapsulates the components required to generate HTTP responses.
@@ -65,7 +72,18 @@ type Service struct {
 	LLMConfig     llm.Config
 	Logger        *cblog.Logger
 	Model         llms.Model
+	// GenerationTimeout bounds one detached generation (0 = DefaultGenerationTimeout).
+	GenerationTimeout time.Duration
+
+	flight singleflight.Group // one generation per cache key at a time
+	slots  chan struct{}      // MaxGenerations; nil = no cap
 }
+
+// ErrGenerationBusy is returned when MaxGenerations generations are already running.
+var ErrGenerationBusy = errors.New("generation skipped: the maximum number of generations is already running")
+
+// DefaultGenerationTimeout is used when Options.GenerationTimeout is 0.
+const DefaultGenerationTimeout = 2 * time.Minute
 
 // NewService loads configuration and initializes the components required for response generation.
 func NewService(ctx context.Context, opts Options) (*Service, error) {
@@ -170,43 +188,101 @@ func createService(ctx context.Context, cfg *config.Config, rules []config.Rule,
 	}
 
 	return &Service{
-		Cache:         cacheDB,
-		CacheDuration: opts.CacheDuration,
-		Config:        cfg,
-		Rules:         rules,
-		EventLogger:   eventLogger,
-		LLMConfig:     modelCfg,
-		Logger:        logger,
-		Model:         model,
+		Cache:             cacheDB,
+		CacheDuration:     opts.CacheDuration,
+		Config:            cfg,
+		Rules:             rules,
+		EventLogger:       eventLogger,
+		LLMConfig:         modelCfg,
+		Logger:            logger,
+		Model:             model,
+		GenerationTimeout: opts.GenerationTimeout,
+		slots:             newSlots(opts.MaxGenerations),
 	}, nil
 }
 
+func newSlots(n int) chan struct{} {
+	if n <= 0 {
+		return nil
+	}
+	return make(chan struct{}, n)
+}
+
 // GenerateHTTPResponse creates an HTTP response using the LLM.
+//
+// The generation runs detached from the client's request: if the client hangs up (scanners often give up after a
+// few seconds, and a cold model can take longer), it still completes and is cached for the next request for the
+// same port and URL. Concurrent requests for the same key share one generation instead of each starting their own.
 func (s *Service) GenerateHTTPResponse(r *http.Request, port string) ([]byte, error) {
 	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
 	if err != nil {
 		s.Logger.WithPrefix("GALAH").Errorf("error creating llm message: %s", err)
 		return nil, err
 	}
+	resp, err, shared := s.generate(r, port, messages)
+	if shared {
+		s.Logger.WithPrefix("GALAH").Infof("joined the generation already running for %q", r.URL.String())
+	}
+	if r.Context().Err() != nil && err == nil {
+		s.Logger.WithPrefix("GALAH").Infof("client left before the response was ready; cached it for the next request to %q", r.URL.String())
+	}
+	return resp, err
+}
 
-	respStr, err := llm.GenerateLLMResponse(r.Context(), s.Model, s.LLMConfig.Temperature, messages)
+// RefreshInBackground regenerates the response for r's cache key without making the caller wait (used to serve a
+// stale cached response and refresh it). The request's body and headers are read now, before the handler returns.
+func (s *Service) RefreshInBackground(r *http.Request, port string) {
+	messages, err := llm.CreateMessageContent(r, s.Config, s.LLMConfig.Provider)
 	if err != nil {
-		s.Logger.WithPrefix("GALAH").Errorf("error generating response: %s", err)
-		s.EventLogger.LogError(r, respStr, port, err)
-		return nil, err
+		s.Logger.WithPrefix("GALAH").Errorf("error creating llm message for refresh: %s", err)
+		return
 	}
-	resp := []byte(respStr)
-
-	s.Logger.WithPrefix("GALAH").Infof("generated HTTP response: %s", strings.ReplaceAll(respStr, "\n", " "))
-
-	if s.CacheDuration != 0 {
-		key := cache.GetCacheKey(r, port)
-		if err := cache.StoreResponse(s.Cache, key, resp); err != nil {
-			s.Logger.WithPrefix("GALAH").Errorf("error storing response in cache: %s", err)
+	go func() {
+		if _, err, _ := s.generate(r, port, messages); err == nil {
+			s.Logger.WithPrefix("GALAH").Infof("refreshed the cached response for %q", r.URL.String())
 		}
-	}
+	}()
+}
 
-	return resp, nil
+// generate runs one LLM generation per cache key at a time, detached from the request, and caches the result.
+func (s *Service) generate(r *http.Request, port string, messages []llms.MessageContent) ([]byte, error, bool) {
+	key := cache.GetCacheKey(r, port)
+	v, err, shared := s.flight.Do(key, func() (any, error) {
+		if s.slots != nil {
+			select {
+			case s.slots <- struct{}{}:
+				defer func() { <-s.slots }()
+			default:
+				s.Logger.WithPrefix("GALAH").Warnf("%s (%d) for %q", ErrGenerationBusy, cap(s.slots), r.URL.String())
+				return nil, ErrGenerationBusy
+			}
+		}
+		timeout := s.GenerationTimeout
+		if timeout <= 0 {
+			timeout = DefaultGenerationTimeout
+		}
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), timeout)
+		defer cancel()
+
+		respStr, err := llm.GenerateLLMResponse(ctx, s.Model, s.LLMConfig.Temperature, messages)
+		if err != nil {
+			s.Logger.WithPrefix("GALAH").Errorf("error generating response: %s", err)
+			s.EventLogger.LogError(r, respStr, port, err)
+			return nil, err
+		}
+		resp := []byte(respStr)
+		s.Logger.WithPrefix("GALAH").Infof("generated HTTP response: %s", strings.ReplaceAll(respStr, "\n", " "))
+		if s.CacheDuration != 0 {
+			if err := cache.StoreResponse(s.Cache, key, resp); err != nil {
+				s.Logger.WithPrefix("GALAH").Errorf("error storing response in cache: %s", err)
+			}
+		}
+		return resp, nil
+	})
+	if err != nil {
+		return nil, err, shared
+	}
+	return v.([]byte), nil, shared
 }
 
 // CheckCache verifies if a response for the given request and port exists in
