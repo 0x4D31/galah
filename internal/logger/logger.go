@@ -14,6 +14,7 @@ import (
 
 	"github.com/0x4d31/galah/pkg/enrich"
 	"github.com/0x4d31/galah/pkg/llm"
+	"github.com/0x4d31/galah/pkg/realip"
 	"github.com/0x4d31/galah/pkg/suricata"
 	cblog "github.com/charmbracelet/log"
 	"github.com/google/uuid"
@@ -131,6 +132,7 @@ func (l *Logger) commonFields(r *http.Request, port string) map[string]any {
 		"srcIP":      srcIP,
 		"srcHost":    host,
 		"srcPort":    srcPort,
+		"proxyIP":    realip.ProxyAddr(r),
 		"tags":       tags,
 		"sensorName": sensorName,
 		"port":       port,
