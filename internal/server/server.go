@@ -36,6 +36,11 @@ var ignoreHeaders = map[string]bool{
 	"date":           true,
 	"expires":        true,
 	"last-modified":  true,
+	// Framing headers: the model sometimes invents "Content-Encoding: gzip"
+	// for a plain-text body, and clients then fail to decode it (empty page).
+	// Go's net/http handles transfer framing itself.
+	"content-encoding":  true,
+	"transfer-encoding": true,
 	// OpenAI made-up headers to ignore
 	"http":     true,
 	"http/1.0": true,
